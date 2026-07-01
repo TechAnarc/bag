@@ -8,7 +8,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-export const NAV = [
+type NavItem = { to: string; label: string; icon: any; exact?: boolean };
+export const NAV: NavItem[] = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/admin/orders", label: "Orders", icon: ShoppingBag },
   { to: "/admin/products", label: "Products", icon: Package },
@@ -27,7 +28,7 @@ export const NAV = [
   { to: "/admin/returns", label: "Returns", icon: Undo2 },
   { to: "/admin/settings", label: "Settings", icon: Settings },
   { to: "/admin/profile", label: "Profile", icon: User },
-] as const;
+];
 
 export function AdminShell({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
