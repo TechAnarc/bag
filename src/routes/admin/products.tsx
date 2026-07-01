@@ -129,10 +129,10 @@ function Page() {
                 options={[{ value: "", label: "—" }, ...(categories.data ?? []).map((c: any) => ({ value: c.id, label: c.name }))]} />
               <Select label="Brand" value={editing.brand_id || ""} onChange={(v: string) => setEditing({ ...editing, brand_id: v || null })}
                 options={[{ value: "", label: "—" }, ...(brands.data ?? []).map((c: any) => ({ value: c.id, label: c.name }))]} />
-              <Field label="MRP (₹)" type="number" value={editing.mrp ?? 0} onChange={(v: string) => setEditing({ ...editing, mrp: Number(v: string) })} />
-              <Field label="Selling Price (₹)" type="number" value={editing.selling_price ?? 0} onChange={(v: string) => setEditing({ ...editing, selling_price: Number(v: string) })} />
-              <Field label="Stock" type="number" value={editing.stock ?? 0} onChange={(v: string) => setEditing({ ...editing, stock: Number(v: string) })} />
-              <Field label="Low-stock alert at" type="number" value={editing.low_stock_threshold ?? 5} onChange={(v: string) => setEditing({ ...editing, low_stock_threshold: Number(v: string) })} />
+              <Field label="MRP (₹)" type="number" value={editing.mrp ?? 0} onChange={(v: string) => setEditing({ ...editing, mrp: Number(v) })} />
+              <Field label="Selling Price (₹)" type="number" value={editing.selling_price ?? 0} onChange={(v: string) => setEditing({ ...editing, selling_price: Number(v) })} />
+              <Field label="Stock" type="number" value={editing.stock ?? 0} onChange={(v: string) => setEditing({ ...editing, stock: Number(v) })} />
+              <Field label="Low-stock alert at" type="number" value={editing.low_stock_threshold ?? 5} onChange={(v: string) => setEditing({ ...editing, low_stock_threshold: Number(v) })} />
               <Field label="Color" value={editing.color || ""} onChange={(v: string) => setEditing({ ...editing, color: v })} />
               <Field label="Material" value={editing.material || ""} onChange={(v: string) => setEditing({ ...editing, material: v })} />
               <Select label="Status" value={editing.status} onChange={(v: string) => setEditing({ ...editing, status: v })}
