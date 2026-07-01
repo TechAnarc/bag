@@ -67,7 +67,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
               return (
                 <Link
                   key={to}
-                  to={to}
+                  to={to as any}
                   onClick={() => setOpen(false)}
                   className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all ${
                     active
@@ -119,7 +119,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
               <Bell className="size-4" />
             </button>
             <Link
-              to="/admin/products"
+              to={"/admin/products" as any}
               className="inline-flex items-center gap-2 rounded-full bg-gradient-gold px-4 py-2 text-xs font-medium uppercase tracking-widest text-ink hover:opacity-90"
             >
               <Plus className="size-3.5" /> Quick create
