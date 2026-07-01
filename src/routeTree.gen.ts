@@ -27,6 +27,7 @@ import { Route as ProductSlugRouteImport } from './routes/product.$slug'
 import { Route as PolicySlugRouteImport } from './routes/policy.$slug'
 import { Route as AdminProductsRouteImport } from './routes/admin/products'
 import { Route as AdminOrdersRouteImport } from './routes/admin/orders'
+import { Route as AdminCategoriesRouteImport } from './routes/admin/categories'
 
 const WishlistRoute = WishlistRouteImport.update({
   id: '/wishlist',
@@ -118,6 +119,11 @@ const AdminOrdersRoute = AdminOrdersRouteImport.update({
   path: '/orders',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminCategoriesRoute = AdminCategoriesRouteImport.update({
+  id: '/categories',
+  path: '/categories',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -133,6 +139,7 @@ export interface FileRoutesByFullPath {
   '/shop': typeof ShopRoute
   '/track': typeof TrackRoute
   '/wishlist': typeof WishlistRoute
+  '/admin/categories': typeof AdminCategoriesRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/products': typeof AdminProductsRoute
   '/policy/$slug': typeof PolicySlugRoute
@@ -152,6 +159,7 @@ export interface FileRoutesByTo {
   '/shop': typeof ShopRoute
   '/track': typeof TrackRoute
   '/wishlist': typeof WishlistRoute
+  '/admin/categories': typeof AdminCategoriesRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/products': typeof AdminProductsRoute
   '/policy/$slug': typeof PolicySlugRoute
@@ -173,6 +181,7 @@ export interface FileRoutesById {
   '/shop': typeof ShopRoute
   '/track': typeof TrackRoute
   '/wishlist': typeof WishlistRoute
+  '/admin/categories': typeof AdminCategoriesRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/products': typeof AdminProductsRoute
   '/policy/$slug': typeof PolicySlugRoute
@@ -195,6 +204,7 @@ export interface FileRouteTypes {
     | '/shop'
     | '/track'
     | '/wishlist'
+    | '/admin/categories'
     | '/admin/orders'
     | '/admin/products'
     | '/policy/$slug'
@@ -214,6 +224,7 @@ export interface FileRouteTypes {
     | '/shop'
     | '/track'
     | '/wishlist'
+    | '/admin/categories'
     | '/admin/orders'
     | '/admin/products'
     | '/policy/$slug'
@@ -234,6 +245,7 @@ export interface FileRouteTypes {
     | '/shop'
     | '/track'
     | '/wishlist'
+    | '/admin/categories'
     | '/admin/orders'
     | '/admin/products'
     | '/policy/$slug'
@@ -387,16 +399,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminOrdersRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/categories': {
+      id: '/admin/categories'
+      path: '/categories'
+      fullPath: '/admin/categories'
+      preLoaderRoute: typeof AdminCategoriesRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
   }
 }
 
 interface AdminRouteRouteChildren {
+  AdminCategoriesRoute: typeof AdminCategoriesRoute
   AdminOrdersRoute: typeof AdminOrdersRoute
   AdminProductsRoute: typeof AdminProductsRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
+  AdminCategoriesRoute: AdminCategoriesRoute,
   AdminOrdersRoute: AdminOrdersRoute,
   AdminProductsRoute: AdminProductsRoute,
   AdminIndexRoute: AdminIndexRoute,
