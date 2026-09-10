@@ -682,7 +682,7 @@ model BusinessConfig {
   returnPolicyDays    Int      @default(7)
   legalText           String?
   disclaimer          String?
-  invoicePrefix       String   @default("TRIVENI-INV")
+  invoicePrefix       String   @default("BBH-INV")
   invoiceStartNumber  Int      @default(1)
   defaultTerms        String?
   showPricesWithGST   Boolean  @default(true)

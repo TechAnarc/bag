@@ -309,6 +309,28 @@ export const adminApi = {
 		return response.data;
 	},
 
+	async createLogisticsPartner(data: any) {
+		const response = await api.post("/admin/logistics/partners", data);
+		return response.data;
+	},
+
+	async manifestShipment(orderId: string, partnerId: string) {
+		const response = await api.post("/admin/logistics/shipments/manifest", { orderId, partnerId });
+		return response.data;
+	},
+
+	// Returns & Refund Lifecycle
+	async getReturns(params: { page?: number; limit?: number; status?: string } = {}) {
+		const queryParams = new URLSearchParams(params as Record<string, string>).toString();
+		const response = await api.get(`/admin/orders?status=REFUNDED&${queryParams}`);
+		return response.data;
+	},
+
+	async processRefund(paymentId: string, data: { amount?: number; notes?: any } = {}) {
+		const response = await api.post(`/payments/${paymentId}/refund`, data);
+		return response.data;
+	},
+
     // Agentic & Intelligence
     async getUsersWithIntelligence(params: {
         page?: number; 
