@@ -13,32 +13,78 @@ export class SocketService {
 			cors: {
 				origin: (origin, callback) => {
 					if (!origin) return callback(null, true);
-					const cleanOrigin = origin.replace(/\/$/, "");
 
-					const isLocal =
-						cleanOrigin === "https://localhost" ||
-						cleanOrigin === "http://localhost" ||
-						cleanOrigin.startsWith("capacitor://") ||
-						cleanOrigin.includes("localhost:");
+					const cleanOrigin = origin.trim().replace(/\/+$/, "");
+					const isProduction = env.NODE_ENV === "production";
 
-					if (isLocal) return callback(null, true);
+					const parseConfiguredOrigins = (raw: string | undefined): string[] => {
+						if (!raw) return [];
+						return raw
+							.split(",")
+							.map((o) => o.trim().replace(/\/+$/, ""))
+							.filter(Boolean);
+					};
 
-					const allowedOrigins = [
-						env.CORS_ORIGIN,
-						"https://trivenibombaybaghouse.vercel.app",
-						"https://trivenibombaybaghouse.onrender.com",
-					].map((o) => o?.replace(/\/$/, ""));
-
-					const isAllowed = allowedOrigins.some(
-						(o) => o && (cleanOrigin === o || cleanOrigin.startsWith(o)),
+					const envConfiguredOrigins = Array.from(
+						new Set([
+							...parseConfiguredOrigins(env.CORS_ORIGIN),
+							...parseConfiguredOrigins(env.CORS_ALLOWED_ORIGINS),
+							...parseConfiguredOrigins(env.FRONTEND_URL),
+						]),
 					);
-					const isVercel = cleanOrigin.endsWith(".vercel.app");
 
-					if (isAllowed || isVercel) {
-						callback(null, true);
-					} else {
-						callback(new Error("Not allowed by CORS"));
+					if (isProduction) {
+						const productionAllowedOrigins = Array.from(
+							new Set([
+								...envConfiguredOrigins,
+								"https://trivenibombaybaghouse.vercel.app",
+								"https://trivenibombaybaghouse.onrender.com",
+							]),
+						);
+
+						const isAllowed = productionAllowedOrigins.some(
+							(o) => cleanOrigin === o || cleanOrigin.startsWith(`${o}/`),
+						);
+						const isVercel =
+							cleanOrigin.startsWith("https://") &&
+							cleanOrigin.endsWith(".vercel.app");
+
+						if (isAllowed || isVercel) {
+							return callback(null, true);
+						}
+						return callback(new Error("Not allowed by CORS"));
 					}
+
+					// Development / local:
+					const localDevOrigins = [
+						"http://localhost:8082",
+						"http://localhost:8081",
+						"http://localhost:8080",
+						"http://localhost:5173",
+						"http://localhost:3000",
+						"http://localhost:4000",
+						"http://127.0.0.1:8082",
+						"http://127.0.0.1:8081",
+						"http://127.0.0.1:8080",
+						"http://127.0.0.1:5173",
+						"http://127.0.0.1:3000",
+						"http://127.0.0.1:4000",
+						"https://localhost",
+						"http://localhost",
+					];
+
+					const isExplicitLocalDev = localDevOrigins.includes(cleanOrigin);
+					const isLocalLoopbackPort =
+						/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(cleanOrigin);
+					const isCapacitor = cleanOrigin.startsWith("capacitor://");
+					const matchesConfigured = envConfiguredOrigins.some(
+						(o) => cleanOrigin === o || cleanOrigin.startsWith(`${o}/`),
+					);
+
+					if (isExplicitLocalDev || isLocalLoopbackPort || isCapacitor || matchesConfigured) {
+						return callback(null, true);
+					}
+					return callback(new Error("Not allowed by CORS"));
 				},
 				methods: ["GET", "POST"],
 				credentials: true,

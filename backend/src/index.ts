@@ -40,6 +40,7 @@ import { orderProjection } from "./modules/orders/order.projection";
 import { ade } from "./modules/automation/ade.service";
 import { registerOrderHandlers } from "./modules/orders/order.command-handlers";
 import "./modules/orders/order.listeners"; // Static import: initializes event subscriptions on boot
+import { verifyCryptographicSetup, verifyJWTSetup } from "./utils/crypto-verification";
 
 import { requestLogger } from "./middleware/request-logger.middleware";
 import { adminSocketSubscriber } from "./modules/admin/admin.socket-subscriber";
@@ -75,35 +76,85 @@ app.use(
 			if (!origin) return callback(null, true);
 
 			// Clean the incoming origin
-			const cleanOrigin = origin.replace(/\/$/, "");
+			const cleanOrigin = origin.trim().replace(/\/+$/, "");
+			const isProduction = env.NODE_ENV === "production";
 
-			// 1. Instant approval for Mobile/Local environments
-			const isLocal =
-				cleanOrigin === "https://localhost" ||
-				cleanOrigin === "http://localhost" ||
-				cleanOrigin.startsWith("capacitor://") ||
-				cleanOrigin.includes("localhost:");
+			// Parse environment-configured origins
+			const parseConfiguredOrigins = (raw: string | undefined): string[] => {
+				if (!raw) return [];
+				return raw
+					.split(",")
+					.map((o) => o.trim().replace(/\/+$/, ""))
+					.filter(Boolean);
+			};
 
-			if (isLocal) return callback(null, true);
-
-			// 2. Standard Web Origins
-			const allowedOrigins = [
-				env.CORS_ORIGIN,
-				"https://trivenibombaybaghouse.vercel.app",
-				"https://trivenibombaybaghouse.onrender.com",
-			].map((o) => o?.replace(/\/$/, ""));
-
-			const isAllowed = allowedOrigins.some(
-				(o) => o && (cleanOrigin === o || cleanOrigin.startsWith(o)),
+			const envConfiguredOrigins = Array.from(
+				new Set([
+					...parseConfiguredOrigins(env.CORS_ORIGIN),
+					...parseConfiguredOrigins(env.CORS_ALLOWED_ORIGINS),
+					...parseConfiguredOrigins(env.FRONTEND_URL),
+				]),
 			);
-			const isVercel = cleanOrigin.endsWith(".vercel.app");
 
-			if (isAllowed || isVercel) {
-				callback(null, true);
-			} else {
-				logger.warn(`[CORS] Rejected origin: ${origin}`);
-				callback(new Error("Not allowed by CORS"));
+			if (isProduction) {
+				// Production: ONLY explicitly configured production frontend origin(s) + verified domains
+				const productionAllowedOrigins = Array.from(
+					new Set([
+						...envConfiguredOrigins,
+						"https://trivenibombaybaghouse.vercel.app",
+						"https://trivenibombaybaghouse.onrender.com",
+					]),
+				);
+
+				const isAllowed = productionAllowedOrigins.some(
+					(o) => cleanOrigin === o || cleanOrigin.startsWith(`${o}/`),
+				);
+				const isVercel =
+					cleanOrigin.startsWith("https://") &&
+					cleanOrigin.endsWith(".vercel.app");
+
+				if (isAllowed || isVercel) {
+					return callback(null, true);
+				}
+
+				logger.warn(`[CORS] Rejected origin in production: ${origin}`);
+				return callback(new Error("Not allowed by CORS"));
 			}
+
+			// Local development / testing mode:
+			// Explicitly allow local dev origins (http://localhost:8082, http://localhost:8081, etc.)
+			// Never uses wildcard '*'
+			const localDevOrigins = [
+				"http://localhost:8082",
+				"http://localhost:8081",
+				"http://localhost:8080",
+				"http://localhost:5173",
+				"http://localhost:3000",
+				"http://localhost:4000",
+				"http://127.0.0.1:8082",
+				"http://127.0.0.1:8081",
+				"http://127.0.0.1:8080",
+				"http://127.0.0.1:5173",
+				"http://127.0.0.1:3000",
+				"http://127.0.0.1:4000",
+				"https://localhost",
+				"http://localhost",
+			];
+
+			const isExplicitLocalDev = localDevOrigins.includes(cleanOrigin);
+			const isLocalLoopbackPort =
+				/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(cleanOrigin);
+			const isCapacitor = cleanOrigin.startsWith("capacitor://");
+			const matchesConfigured = envConfiguredOrigins.some(
+				(o) => cleanOrigin === o || cleanOrigin.startsWith(`${o}/`),
+			);
+
+			if (isExplicitLocalDev || isLocalLoopbackPort || isCapacitor || matchesConfigured) {
+				return callback(null, true);
+			}
+
+			logger.warn(`[CORS] Rejected origin in development: ${origin}`);
+			return callback(new Error("Not allowed by CORS"));
 		},
 		credentials: true,
 		methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
@@ -368,9 +419,6 @@ const startServer = async () => {
 	// 2. ISOLATED CRYPTO & JWT DIAGNOSTICS (Non-Blocking)
 	try {
 		logger.info("🔐 [BOOT] Initializing cryptographic diagnostics...");
-		const { verifyCryptographicSetup, verifyJWTSetup } = await import(
-			"./utils/crypto-verification"
-		);
 		await verifyCryptographicSetup().catch((e) =>
 			logger.warn(`⚠️ Cryptographic Self-Test Non-Fatal Alert: ${e.message}`),
 		);

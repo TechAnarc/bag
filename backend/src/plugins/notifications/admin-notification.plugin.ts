@@ -3,7 +3,10 @@ import { notificationService } from "../../modules/notifications/notification.se
 import { logger } from "../../config/logger";
 
 export class AdminNotificationPlugin {
-	async init() {
+	name = "AdminNotificationPlugin";
+	version = "1.0.0";
+
+	async initialize(app: any) {
 		logger.info(
 			"[AdminNotificationPlugin] Initializing Admin Notification Plugin...",
 		);
