@@ -17,6 +17,7 @@ export const NAV: NavItem[] = [
   { to: "/admin/customers", label: "Customers", icon: Users },
   { to: "/admin/reviews", label: "Reviews", icon: Star },
   { to: "/admin/coupons", label: "Coupons", icon: Ticket },
+  { to: "/admin/inquiries", label: "Inquiries", icon: Mail },
   { to: "/admin/banners", label: "Banners", icon: Image },
   { to: "/admin/marketing", label: "Marketing", icon: Megaphone },
   { to: "/admin/newsletter", label: "Newsletter", icon: Mail },

@@ -810,10 +810,31 @@ export class AdminService {
 	}
 
 	async updateBusinessConfig(tenantId: string = "DEFAULT", data: any) {
+		// Ensure tenant exists to satisfy foreign key constraint
+		await (prisma as any).tenant.upsert({
+			where: { id: tenantId },
+			update: {},
+			create: {
+				id: tenantId,
+				name: "Bombay Bag House",
+				slug: "bombay-bag-house",
+			},
+		}).catch(() => null);
+
+		const defaults = {
+			businessName: "Bombay Bag House",
+			registeredAddress: { line1: "Commercial Street", city: "Ahmedabad", state: "Gujarat", pincode: "380001", country: "India" },
+			phone: "+91 98765 43210",
+			email: "admin@trivenibombaybaghouse.com",
+			gstin: "24AAAAA0000A1Z5",
+			stateCode: "24",
+			authorizedSignatory: "Piyush Soni",
+			invoicePrefix: "BBH-INV",
+		};
 		return (prisma as any).businessConfig.upsert({
 			where: { tenantId },
 			update: data,
-			create: { ...data, tenantId },
+			create: { ...defaults, ...data, tenantId },
 		});
 	}
 

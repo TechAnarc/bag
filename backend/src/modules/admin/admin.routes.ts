@@ -38,6 +38,7 @@ router.get(
 	adminController.getDashboardStats.bind(adminController),
 );
 router.get("/stats/charts", adminController.getChartData.bind(adminController));
+router.get("/stats/chart", adminController.getChartData.bind(adminController));
 router.get("/analytics", adminController.getAnalytics.bind(adminController));
 router.get(
 	"/surveillance/metrics",
