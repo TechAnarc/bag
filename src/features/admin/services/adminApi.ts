@@ -367,4 +367,21 @@ export const adminApi = {
         const response = await api.delete(`/categories/${id}`);
         return response.data;
     },
+
+    // Reviews Management
+    async getReviews(params: { page?: number; limit?: number; status?: string; search?: string } = {}) {
+        const queryParams = new URLSearchParams(params as Record<string, string>).toString();
+        const response = await api.get(`/reviews/admin?${queryParams}`);
+        return response.data;
+    },
+
+    async updateReviewStatus(reviewId: string, status: 'APPROVED' | 'REJECTED' | 'PENDING') {
+        const response = await api.patch(`/reviews/admin/${reviewId}/status`, { status });
+        return response.data;
+    },
+
+    async deleteReview(reviewId: string) {
+        const response = await api.delete(`/reviews/admin/${reviewId}`);
+        return response.data;
+    },
 };
