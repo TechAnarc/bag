@@ -1,0 +1,1 @@
+import { PrismaClient } from '@prisma/client'; const p = new PrismaClient(); async function r() { const c = await p.category.count(); const pr = await p.product.count(); const a = await p.admin.count(); const cats = await p.category.findMany(); console.log(JSON.stringify({ c, pr, a, cats }, null, 2)); await p.$disconnect(); } r();

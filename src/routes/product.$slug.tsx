@@ -7,7 +7,16 @@ import { ProductCard } from "@/components/product-card";
 import { inr } from "@/lib/catalog";
 import { useStore } from "@/lib/store";
 
+import api from "@/lib/axios";
+import { adaptBackendProduct } from "@/lib/catalog";
+
 export const Route = createFileRoute("/product/$slug")({
+  head: () => ({
+    meta: [
+      { title: "Luxury Bag Collection — Bombay Bag House" },
+      { name: "description", content: "Handcrafted bags engineered for timeless luxury, everyday durability, and elegant journeys." },
+    ],
+  }),
   component: PDP,
   notFoundComponent: () => (
     <SiteLayout>
@@ -22,7 +31,22 @@ export const Route = createFileRoute("/product/$slug")({
 function PDP() {
   const { slug } = Route.useParams();
   const { products, addToCart, toggleWishlist, isWished, pushRecent, recent } = useStore();
-  const product = products.find((p) => p.slug === slug);
+  const [liveProduct, setLiveProduct] = useState<any>(null);
+
+  useEffect(() => {
+    // If not in preloaded products, fetch directly from backend by slug
+    if (!products.find((p) => p.slug === slug)) {
+      api.get(`/products/slug/${slug}`)
+        .then((res) => {
+          if (res.data?.data) {
+            setLiveProduct(adaptBackendProduct(res.data.data));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [slug, products]);
+
+  const product = products.find((p) => p.slug === slug) || liveProduct;
   const [activeImg, setActiveImg] = useState(0);
   const [qty, setQty] = useState(1);
   const [tab, setTab] = useState<"desc" | "specs" | "reviews" | "shipping" | "faq">("desc");
@@ -38,7 +62,7 @@ function PDP() {
   );
   const recentItems = recent.map((id) => products.find((p) => p.id === id)).filter(Boolean).slice(0, 4) as typeof products;
 
-  if (!product) throw notFound();
+  if (!product) return null;
   const wished = isWished(product.id);
   const stockLabel = product.stock > 10 ? "In Stock" : product.stock > 0 ? `Only ${product.stock} left` : "Out of Stock";
 

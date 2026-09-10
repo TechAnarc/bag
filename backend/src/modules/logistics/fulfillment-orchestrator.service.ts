@@ -117,6 +117,9 @@ export class FulfillmentOrchestratorService {
 			}, 50);
 
 			return updatedOrder;
+		}, {
+			maxWait: 10000,
+			timeout: 25000,
 		});
 	}
 

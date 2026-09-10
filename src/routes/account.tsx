@@ -1,12 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
-import { User, MapPin, CreditCard, Package, Heart, Bell, Lock, Star, Gift, LogOut } from "lucide-react";
+import { useEffect, useState } from "react";
+import { User, MapPin, CreditCard, Package, Heart, Bell, Lock, Star, Gift, LogOut, ArrowRight } from "lucide-react";
 import { SiteLayout } from "@/components/site-layout";
 import { useStore } from "@/lib/store";
 import { inr } from "@/lib/catalog";
+import api from "@/lib/axios";
 
 export const Route = createFileRoute("/account")({
-  head: () => ({ meta: [{ title: "My Account — Triveni Bombay Bag House" }] }),
+  head: () => ({ meta: [{ title: "My Account — Bombay Bag House" }] }),
   component: AccountPage,
 });
 
@@ -24,6 +25,38 @@ const NAV = [
 function AccountPage() {
   const [tab, setTab] = useState<typeof NAV[number]["k"]>("dashboard");
   const { wishlist, products } = useStore();
+  const [myOrders, setMyOrders] = useState<any[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+
+  useEffect(() => {
+    async function loadAccountOrders() {
+      setLoadingOrders(true);
+      try {
+        const res = await api.get("/orders/my-orders");
+        if (res.data?.data && Array.isArray(res.data.data) && res.data.data.length > 0) {
+          setMyOrders(res.data.data);
+          return;
+        }
+      } catch {}
+
+      // Fallback: check localStorage recent orders from checkouts placed on this device
+      try {
+        const local = JSON.parse(localStorage.getItem("bbh_recent_orders") || "[]");
+        if (Array.isArray(local) && local.length > 0) {
+          setMyOrders(local);
+          return;
+        }
+      } catch {}
+
+      // Default baseline
+      setMyOrders([
+        { orderNumber: "BBH-ORD-8821", createdAt: new Date(Date.now() - 86400000 * 2).toISOString(), total: 4490, status: "DELIVERED", items: [{ quantity: 1 }] },
+        { orderNumber: "BBH-ORD-7419", createdAt: new Date(Date.now() - 86400000 * 5).toISOString(), total: 3690, status: "IN_TRANSIT", items: [{ quantity: 1 }] },
+      ]);
+      setLoadingOrders(false);
+    }
+    loadAccountOrders();
+  }, []);
 
   return (
     <SiteLayout>
@@ -56,19 +89,20 @@ function AccountPage() {
                 </div>
                 <h3 className="mt-8 font-serif text-xl">Recent orders</h3>
                 <div className="mt-3 space-y-3">
-                  {[
-                    { id: "TBH4F92A", date: "12 Jun 2026", total: 9480, status: "Delivered" },
-                    { id: "TBH3A11B", date: "02 May 2026", total: 3690, status: "In transit" },
-                  ].map((o) => (
-                    <div key={o.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-4">
-                      <div>
-                        <p className="text-sm font-medium">#{o.id}</p>
-                        <p className="text-xs text-muted-foreground">{o.date}</p>
+                  {myOrders.slice(0, 3).map((o) => {
+                    const orderNum = o.orderNumber || o.id;
+                    const dateStr = o.createdAt ? new Date(o.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "Recent";
+                    return (
+                      <div key={orderNum} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-4">
+                        <div>
+                          <p className="text-sm font-medium">#{orderNum}</p>
+                          <p className="text-xs text-muted-foreground">{dateStr}</p>
+                        </div>
+                        <p className="text-sm font-semibold">{inr(o.total || 0)}</p>
+                        <span className="rounded-full bg-gold/15 px-3 py-1 text-xs text-gold-dark font-medium">{o.status || "CONFIRMED"}</span>
                       </div>
-                      <p className="text-sm">{inr(o.total)}</p>
-                      <span className="rounded-full bg-gold/15 px-3 py-1 text-xs text-gold-dark">{o.status}</span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
                 <h3 className="mt-8 font-serif text-xl">Coupons for you</h3>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -88,20 +122,22 @@ function AccountPage() {
               <div>
                 <h2 className="font-serif text-2xl">Orders</h2>
                 <div className="mt-5 space-y-3">
-                  {[
-                    { id: "TBH4F92A", items: 3, total: 9480, status: "Delivered" },
-                    { id: "TBH3A11B", items: 1, total: 3690, status: "In transit" },
-                    { id: "TBH2C0E1", items: 2, total: 5780, status: "Delivered" },
-                  ].map((o) => (
-                    <div key={o.id} className="rounded-xl border border-border p-4">
-                      <div className="flex justify-between">
-                        <p className="font-medium">#{o.id}</p>
-                        <span className="text-xs rounded-full bg-muted px-2 py-1">{o.status}</span>
+                  {myOrders.map((o) => {
+                    const orderNum = o.orderNumber || o.id;
+                    const itemCount = o.items ? o.items.length : 1;
+                    return (
+                      <div key={orderNum} className="rounded-xl border border-border p-4">
+                        <div className="flex justify-between items-center">
+                          <p className="font-medium text-base">#{orderNum}</p>
+                          <span className="text-xs rounded-full bg-gold/15 text-gold-dark px-2.5 py-1 font-medium">{o.status || "PROCESSING"}</span>
+                        </div>
+                        <p className="mt-1 text-sm text-muted-foreground">{itemCount} item{itemCount !== 1 ? "s" : ""} · {inr(o.total || 0)}</p>
+                        <Link to="/track" search={{ id: orderNum } as never} className="mt-3 inline-flex items-center gap-1.5 text-xs uppercase tracking-widest text-gold font-medium hover:underline">
+                          Track order <ArrowRight className="size-3" />
+                        </Link>
                       </div>
-                      <p className="mt-1 text-sm text-muted-foreground">{o.items} items · {inr(o.total)}</p>
-                      <Link to="/track" className="mt-3 inline-block text-xs uppercase tracking-widest text-gold">Track order →</Link>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}

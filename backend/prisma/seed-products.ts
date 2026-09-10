@@ -4,97 +4,134 @@ import slugify from "slugify";
 const prisma = new PrismaClient();
 
 const categories = [
-	"Anklets",
-	"Bangles",
-	"Rings",
-	"Kada",
-	"Men's Ring",
-	"Men's Chain",
-	"Mala",
-	"Men's Bracelets",
-	"Rudraksh",
-	"Mangalsutra",
-	"Necklace Set",
-	"Antique Necklace",
-	"Ladies Bracelets",
-	"Ladies Chain",
+	"Tote Bags",
+	"Handbags",
+	"Backpacks",
+	"Laptop Bags",
+	"Travel Bags",
+	"Sling Bags",
+	"Wallets",
+	"Duffel Bags",
+	"Clutches",
+	"School Bags",
 ];
 
-const platingTypes = [
-	"1 Gram Gold Plated",
-	"Premium Gold Finish",
-	"Antique Gold Plated",
-	"Rose Gold Plated",
+const materials = [
+	"Full-grain Leather",
+	"Saffiano Leather",
+	"Waxed Canvas",
+	"Ballistic Nylon",
+	"Vegan Leather",
+	"Polycarbonate",
 ];
-const materials = ["Brass", "Copper", "Alloy"];
-const occasions = ["Wedding", "Festival", "Daily Wear", "Party", "Gift"];
+
+const bagSamples = [
+	{ name: "Noir Saffiano Tote", cat: "Tote Bags", price: 4490, mrp: 5990, mat: "Saffiano Leather", cap: "18L", color: "Black" },
+	{ name: "Cognac Executive Messenger", cat: "Laptop Bags", price: 5890, mrp: 7490, mat: "Full-grain Leather", cap: "15L", color: "Cognac" },
+	{ name: "Aurum Cabin Trolley 20\"", cat: "Travel Bags", price: 8990, mrp: 11990, mat: "Polycarbonate", cap: "38L", color: "Champagne" },
+	{ name: "Heritage Atlas Backpack", cat: "Backpacks", price: 3690, mrp: 4990, mat: "Waxed Canvas", cap: "24L", color: "Olive" },
+	{ name: "Aurora Crossbody Sling", cat: "Sling Bags", price: 2490, mrp: 3290, mat: "Vegan Leather", cap: "5L", color: "Blush" },
+	{ name: "Onyx Wallet Bifold", cat: "Wallets", price: 1290, mrp: 1690, mat: "Pebbled Leather", cap: "0.5L", color: "Black" },
+	{ name: "Voyager Duffel 45L", cat: "Duffel Bags", price: 3290, mrp: 4490, mat: "Ballistic Nylon", cap: "45L", color: "Charcoal" },
+	{ name: "Signature Gold Evening Clutch", cat: "Clutches", price: 6990, mrp: 8990, mat: "Metallic Leather", cap: "2L", color: "Gold" },
+	{ name: "Junior Pro Ergonomic Schoolbag", cat: "School Bags", price: 1890, mrp: 2490, mat: "Recycled Polyester", cap: "20L", color: "Navy" },
+	{ name: "Pebble Hobo Shoulder Bag", cat: "Handbags", price: 3990, mrp: 5290, mat: "Pebbled Leather", cap: "12L", color: "Camel" },
+];
 
 async function main() {
-	console.log("🌱 Starting detailed database seeding...");
+	console.log("🌱 Starting bag database seeding...");
 
+	const catMap = new Map<string, string>();
 	for (const catName of categories) {
 		const catSlug = catName.toLowerCase().replace(/ /g, "-").replace(/'/g, "");
 		const category = await prisma.category.upsert({
 			where: { slug: catSlug },
-			update: { name: catName },
+			update: { name: catName, isActive: true },
 			create: {
 				name: catName,
 				slug: catSlug,
 				isActive: true,
 			},
 		});
-
+		catMap.set(catName, category.id);
 		console.log(`📂 Category: ${catName} seeded.`);
+	}
 
-		let catIdx = categories.indexOf(catName);
-		// Seed 40 products per category
-		for (let i = 1; i <= 40; i++) {
-			const productName = `${catName} Design ${i}`;
-			const slug = slugify(
-				`${catName} ${i} ${Math.random().toString(36).substring(7)}`,
-				{ lower: true },
-			);
-			const sku = `TRV-${catSlug.replace(/-/g, "").substring(0, 4).toUpperCase()}-${catIdx}${1000 + i}`;
-			const price = Math.floor(Math.random() * 2000) + 500;
+	for (const bag of bagSamples) {
+		const categoryId = catMap.get(bag.cat);
+		if (!categoryId) continue;
 
-			await prisma.product.create({
-				data: {
-					name: productName,
-					slug: slug,
-					sku: sku,
-					categoryId: category.id,
-					price: price,
-					discountPrice: price - Math.floor(Math.random() * 200),
-					gstIncluded: true,
-					platingType:
-						platingTypes[Math.floor(Math.random() * platingTypes.length)],
-					shortTagline: "Designed to celebrate your unique elegance",
-					description:
-						"This elegant piece is crafted with precision to provide a premium look and feel. Perfect for any special occasion.",
-					images: [`https://picsum.photos/seed/${slug}/600/800`],
-					thumbnail: `https://picsum.photos/seed/${slug}/300/400`,
-					specifications: {
-						weight: `${Math.floor(Math.random() * 50) + 10}g`,
-						material: materials[Math.floor(Math.random() * materials.length)],
-						surfaceFinish: "Polished",
-						occasion: occasions[Math.floor(Math.random() * occasions.length)],
-						brand: "Triveni Jewellers",
-						packageContents: `1 ${catName}`,
-					},
-					inventory: {
-						quantity: 50,
-						inStock: true,
-					},
-					seo: {
-						metaTitle: `${productName} | Triveni Jewellers`,
-						metaDescription: `Buy premium ${productName} at best price.`,
-					},
-					status: ProductStatus.ACTIVE,
-					isActive: true,
+		const slug = slugify(bag.name, { lower: true, strict: true });
+		const sku = `BBH-${bag.cat.substring(0, 3).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+		await prisma.product.upsert({
+			where: { slug },
+			update: {
+				name: bag.name,
+				categoryId,
+				price: bag.price,
+				basePrice: bag.mrp,
+				sellingPrice: bag.price,
+				ownerPrice: Math.round(bag.price * 0.6),
+				gstIncluded: true,
+				shortTagline: `Handcrafted ${bag.name} in ${bag.mat}`,
+				description: `Designed for everyday luxury and timeless durability. Crafted with premium ${bag.mat}.`,
+				images: ["https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=800&q=80"],
+				thumbnail: "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=400&q=80",
+				specifications: {
+					material: bag.mat,
+					capacity: bag.cap,
+					color: bag.color,
+					brand: "Bombay Bag House",
 				},
-			});
-		}
-		console.log(`✅ 40 products seeded for ${catName}.`);
+				careInstructions: "Keep away from sharp objects and heat. Wipe with a clean, soft cloth. Store in dust bag.",
+				badges: ["Handcrafted Luxury", "Premium Materials", "Everyday Durability", "Insured Shipping"],
+				inventory: {
+					quantity: 25,
+					inStock: true,
+				},
+				seo: {
+					metaTitle: `${bag.name} | Bombay Bag House`,
+					metaDescription: `Discover the luxury ${bag.name} crafted for durability.`,
+				},
+				status: ProductStatus.ACTIVE,
+				isActive: true,
+			},
+			create: {
+				name: bag.name,
+				slug,
+				sku,
+				categoryId,
+				price: bag.price,
+				basePrice: bag.mrp,
+				sellingPrice: bag.price,
+				ownerPrice: Math.round(bag.price * 0.6),
+				gstIncluded: true,
+				shortTagline: `Handcrafted ${bag.name} in ${bag.mat}`,
+				description: `Designed for everyday luxury and timeless durability. Crafted with premium ${bag.mat}.`,
+				images: ["https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=800&q=80"],
+				thumbnail: "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=400&q=80",
+				specifications: {
+					material: bag.mat,
+					capacity: bag.cap,
+					color: bag.color,
+					brand: "Bombay Bag House",
+				},
+				careInstructions: "Keep away from sharp objects and heat. Wipe with a clean, soft cloth. Store in dust bag.",
+				badges: ["Handcrafted Luxury", "Premium Materials", "Everyday Durability", "Insured Shipping"],
+				inventory: {
+					quantity: 25,
+					inStock: true,
+				},
+				seo: {
+					metaTitle: `${bag.name} | Bombay Bag House`,
+					metaDescription: `Discover the luxury ${bag.name} crafted for durability.`,
+				},
+				status: ProductStatus.ACTIVE,
+				isActive: true,
+			},
+		});
+		console.log(`👜 Product: ${bag.name} seeded.`);
 	}
 
 	console.log("🚀 Seeding completed successfully.");

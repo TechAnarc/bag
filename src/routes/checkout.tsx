@@ -1,13 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Check, ShieldCheck, Truck, CreditCard, Smartphone, Wallet } from "lucide-react";
+import { Check, ShieldCheck, Truck, CreditCard, Smartphone, Wallet, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { SiteLayout } from "@/components/site-layout";
 import { inr } from "@/lib/catalog";
 import { useStore } from "@/lib/store";
+import api from "@/lib/axios";
 
 export const Route = createFileRoute("/checkout")({
-  head: () => ({ meta: [{ title: "Checkout — Triveni Bombay Bag House" }] }),
+  head: () => ({ meta: [{ title: "Checkout — Bombay Bag House" }] }),
   component: Checkout,
 });
 
@@ -20,6 +21,21 @@ function Checkout() {
   const [step, setStep] = useState(0);
   const [slot, setSlot] = useState("Standard");
   const [method, setMethod] = useState<"card" | "upi" | "cod">("card");
+  const [isPlacing, setIsPlacing] = useState(false);
+
+  // Address state
+  const [address, setAddress] = useState({
+    fullName: "",
+    mobile: "",
+    email: "",
+    addressLine1: "",
+    addressLine2: "",
+    city: "",
+    state: "",
+    pincode: "",
+    country: "India",
+  });
+
   const shipping = cartSubtotal > 2499 ? 0 : 99;
   const total = cartSubtotal + shipping;
 
@@ -34,11 +50,53 @@ function Checkout() {
     );
   }
 
-  const placeOrder = () => {
-    const orderId = "TBH" + Math.random().toString(36).slice(2, 8).toUpperCase();
-    clearCart();
-    toast.success("Order placed!", { description: `Confirmation #${orderId}` });
-    navigate({ to: "/account" });
+  const placeOrder = async () => {
+    if (isPlacing) return;
+    setIsPlacing(true);
+
+    try {
+      // Map payment method enum to backend Prisma PaymentMethod
+      const paymentMethodMap: Record<string, string> = {
+        card: "CARD",
+        upi: "UPI",
+        cod: "COD",
+      };
+
+      const payload = {
+        paymentMethod: paymentMethodMap[method] || "COD",
+        shippingAddress: address,
+        billingAddress: address,
+        customerNotes: `Delivery Slot: ${slot}`,
+        items: items.map((i) => ({
+          productId: i.product.id,
+          quantity: i.qty,
+        })),
+        deliveryMethod: "SHIP",
+      };
+
+      const res = await api.post("/orders", payload);
+      const data = res.data?.data;
+      const order = data?.order || data;
+      const orderNumber = order?.orderNumber || "BBH" + Math.random().toString(36).slice(2, 8).toUpperCase();
+
+      clearCart();
+      toast.success("Order placed successfully!", {
+        description: `Confirmation #${orderNumber}. Thank you for choosing Bombay Bag House.`,
+      });
+
+      // Save last order for account page hydration
+      try {
+        const existing = JSON.parse(localStorage.getItem("bbh_recent_orders") || "[]");
+        localStorage.setItem("bbh_recent_orders", JSON.stringify([order, ...existing].slice(0, 10)));
+      } catch {}
+
+      navigate({ to: "/account" });
+    } catch (err: any) {
+      const msg = err.response?.data?.message || err.message || "Failed to place order";
+      toast.error("Checkout failed", { description: msg });
+    } finally {
+      setIsPlacing(false);
+    }
   };
 
   return (
@@ -60,17 +118,17 @@ function Checkout() {
               <form className="grid gap-4" onSubmit={(e) => { e.preventDefault(); setStep(1); }}>
                 <p className="font-serif text-2xl">Shipping address</p>
                 <div className="grid gap-4 md:grid-cols-2">
-                  <Field label="Full name" required />
-                  <Field label="Mobile" type="tel" required />
-                  <Field label="Email" type="email" required className="md:col-span-2" />
-                  <Field label="Address line 1" required className="md:col-span-2" />
-                  <Field label="Address line 2" className="md:col-span-2" />
-                  <Field label="City" required />
-                  <Field label="State" required />
-                  <Field label="PIN" required />
-                  <Field label="Country" defaultValue="India" required />
+                  <Field label="Full name" required value={address.fullName} onChange={(e) => setAddress({ ...address, fullName: e.target.value })} />
+                  <Field label="Mobile" type="tel" required value={address.mobile} onChange={(e) => setAddress({ ...address, mobile: e.target.value })} />
+                  <Field label="Email" type="email" required value={address.email} onChange={(e) => setAddress({ ...address, email: e.target.value })} className="md:col-span-2" />
+                  <Field label="Address line 1" required value={address.addressLine1} onChange={(e) => setAddress({ ...address, addressLine1: e.target.value })} className="md:col-span-2" />
+                  <Field label="Address line 2" value={address.addressLine2} onChange={(e) => setAddress({ ...address, addressLine2: e.target.value })} className="md:col-span-2" />
+                  <Field label="City" required value={address.city} onChange={(e) => setAddress({ ...address, city: e.target.value })} />
+                  <Field label="State" required value={address.state} onChange={(e) => setAddress({ ...address, state: e.target.value })} />
+                  <Field label="PIN" required value={address.pincode} onChange={(e) => setAddress({ ...address, pincode: e.target.value })} />
+                  <Field label="Country" value={address.country} onChange={(e) => setAddress({ ...address, country: e.target.value })} required />
                 </div>
-                <button className="mt-3 rounded-full bg-ink py-3 text-xs uppercase tracking-widest text-cream">Continue to delivery</button>
+                <button type="submit" className="mt-3 rounded-full bg-ink py-3 text-xs uppercase tracking-widest text-cream">Continue to delivery</button>
               </form>
             )}
 
@@ -143,8 +201,10 @@ function Checkout() {
                 </ul>
                 <p className="mt-4 text-xs text-muted-foreground">Delivery: {slot} · Payment: {method.toUpperCase()}</p>
                 <div className="mt-6 flex gap-2">
-                  <button onClick={() => setStep(2)} className="rounded-full border border-border px-6 py-3 text-xs uppercase tracking-widest">Back</button>
-                  <button onClick={placeOrder} className="flex-1 rounded-full bg-gradient-gold py-3 text-xs uppercase tracking-widest text-ink">Place order</button>
+                  <button onClick={() => setStep(2)} className="rounded-full border border-border px-6 py-3 text-xs uppercase tracking-widest" disabled={isPlacing}>Back</button>
+                  <button onClick={placeOrder} disabled={isPlacing} className="flex-1 flex items-center justify-center gap-2 rounded-full bg-gradient-gold py-3 text-xs uppercase tracking-widest text-ink font-semibold disabled:opacity-50">
+                    {isPlacing ? <><Loader2 className="size-4 animate-spin" /> Placing Order...</> : "Place order"}
+                  </button>
                 </div>
               </div>
             )}

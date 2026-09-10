@@ -1,21 +1,31 @@
 import { Router } from "express";
 import { OrderController } from "./order.controller";
-import { authenticate, authorize } from "../../middleware/auth.middleware";
+import { authenticate, optionalAuthenticate, authorize } from "../../middleware/auth.middleware";
 import { Role } from "@prisma/client";
 
 const router = Router();
 const orderController = new OrderController();
 
-// All order routes require authentication
-router.use(authenticate);
+// Public tracking route (no auth required)
+router.get("/track/:orderNumber", (req, res) =>
+	orderController.trackOrderByNumber(req, res),
+);
 
-// User routes
-router.post("/", (req, res) => orderController.createOrder(req, res));
-router.post("/verify-payment", (req, res) =>
+// Order placement & payment verification accept registered or guest checkouts
+router.post("/", optionalAuthenticate, (req, res) =>
+	orderController.createOrder(req, res),
+);
+router.post("/verify-payment", optionalAuthenticate, (req, res) =>
 	orderController.verifyPayment(req, res),
 );
-router.get("/my-orders", (req, res) => orderController.getUserOrders(req, res));
-router.get("/:id", (req, res) => orderController.getOrderById(req, res));
+
+// Authenticated user routes
+router.get("/my-orders", authenticate, (req, res) =>
+	orderController.getUserOrders(req, res),
+);
+router.get("/:id", authenticate, (req, res) =>
+	orderController.getOrderById(req, res),
+);
 
 // Admin routes
 router.get("/", authorize(Role.ADMIN), (req, res) =>

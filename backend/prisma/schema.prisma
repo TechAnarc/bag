@@ -178,8 +178,8 @@ model Product {
   images           String[]
   thumbnail        String?
   specifications   Json?
-  careInstructions String?                @default("After each use, gently wipe your jewelry with a soft cloth. Store in a cool, dry place away from direct sunlight. Avoid immersing your jewelry in water. Refrain from cleaning with soap or harsh chemicals.")
-  badges           String[]               @default(["Fine Precious Metals", "Handmade in India", "Everyday Luxury", "Insured Shipping"])
+  careInstructions String?                @default("Keep away from sharp objects and extreme heat. Wipe gently with a dry or damp soft cloth. Store in the provided dust bag when not in use.")
+  badges           String[]               @default(["Handcrafted Luxury", "Premium Materials", "Everyday Durability", "Insured Shipping"])
   inventory        Json?
   seo              Json?
   status           ProductStatus          @default(ACTIVE)

@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { loadProducts, type Product } from "./catalog";
+import { adaptBackendProduct, loadProducts, type Product } from "./catalog";
+import api from "./axios";
 
 type CartItem = { id: string; qty: number };
 
@@ -49,7 +50,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [wishlist, setWishlist] = useLocal<string[]>("tbh_wishlist_v1", []);
   const [recent, setRecent] = useLocal<string[]>("tbh_recent_v1", []);
 
-  const refreshProducts = useCallback(() => setProducts(loadProducts()), []);
+  const refreshProducts = useCallback(async () => {
+    try {
+      const res = await api.get("/products?limit=100");
+      const backendList = res.data?.data?.products || [];
+      if (Array.isArray(backendList) && backendList.length > 0) {
+        const adapted = backendList.map(adaptBackendProduct);
+        setProducts(adapted);
+        return;
+      }
+    } catch {
+      // Graceful fallback to local catalog
+    }
+    setProducts(loadProducts());
+  }, []);
 
   useEffect(() => {
     refreshProducts();

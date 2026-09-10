@@ -4,6 +4,8 @@ import { sendSuccess, sendError } from "../../utils/response";
 import { AuthRequest } from "../../middleware/auth.middleware";
 import { PaymentMethod } from "@prisma/client";
 
+import { prisma } from "../../config/database";
+
 const orderService = new OrderService();
 
 export class OrderController {
@@ -12,11 +14,6 @@ export class OrderController {
 	 */
 	async createOrder(req: AuthRequest, res: Response) {
 		try {
-			const userId = req.auth?.id;
-			if (!userId) {
-				return sendError(res, "Unauthorized", 401);
-			}
-
 			const {
 				paymentMethod,
 				shippingAddress,
@@ -24,6 +21,7 @@ export class OrderController {
 				customerNotes,
 				items,
 				deliveryMethod,
+				couponCode,
 			} = req.body;
 
 			if (!paymentMethod || !shippingAddress) {
@@ -34,13 +32,51 @@ export class OrderController {
 				);
 			}
 
+			let userId = req.auth?.id;
+
+			// If guest checkout without auth token, resolve or create guest customer user record
+			if (!userId) {
+				const customerEmail = shippingAddress.email?.toLowerCase().trim();
+				const customerPhone = shippingAddress.mobile || shippingAddress.phone;
+				const customerName = shippingAddress.fullName || shippingAddress.name || "Guest Customer";
+
+				if (!customerEmail && !customerPhone) {
+					return sendError(res, "Customer email or phone is required for checkout", 400);
+				}
+
+				// Find existing user or create guest record
+				let user = await prisma.user.findFirst({
+					where: {
+						OR: [
+							...(customerEmail ? [{ email: customerEmail }] : []),
+							...(customerPhone ? [{ phone: customerPhone }] : []),
+						],
+					},
+				});
+
+				if (!user) {
+					user = await prisma.user.create({
+						data: {
+							name: customerName,
+							email: customerEmail || null,
+							phone: customerPhone || null,
+							passwordHash: "GUEST_CHECKOUT",
+							role: "USER",
+							status: "ACTIVE",
+						},
+					});
+				}
+
+				userId = user.id;
+			}
+
 			const result = await orderService.createOrderFromCart(
 				userId,
 				paymentMethod as PaymentMethod,
 				shippingAddress,
 				billingAddress,
 				customerNotes,
-				undefined, // idempotencyKey (not used from frontend)
+				undefined, // idempotencyKey
 				items, // directItems from frontend
 				deliveryMethod,
 			);
@@ -135,6 +171,49 @@ export class OrderController {
 		} catch (error) {
 			console.error("Get order error:", error);
 			return sendError(res, "Failed to retrieve order");
+		}
+	}
+
+	/**
+	 * Track order by Order Number (Public endpoint with sanitized tracking details)
+	 */
+	async trackOrderByNumber(req: Request, res: Response) {
+		try {
+			const { orderNumber } = req.params;
+			if (!orderNumber) {
+				return sendError(res, "Order number is required", 400);
+			}
+
+			const order = await orderService.getOrderByNumber(orderNumber.trim().toUpperCase());
+			if (!order) {
+				return sendError(res, "Order not found", 404);
+			}
+
+			// Public tracking details (sanitized, zero sensitive customer billing data exposed)
+			const trackingData = {
+				orderNumber: order.orderNumber,
+				status: order.status,
+				createdAt: order.createdAt,
+				estimatedDelivery: order.estimatedDelivery,
+				trackingNumber: order.trackingNumber,
+				items: (order.items || []).map((item: any) => ({
+					name: item.product?.name || "Product",
+					quantity: item.quantity,
+					price: item.price,
+					image: item.product?.thumbnail || item.product?.images?.[0] || null,
+				})),
+				timeline: order.timeline || [],
+				shippingAddress: {
+					city: order.shippingAddress?.city,
+					state: order.shippingAddress?.state,
+					pincode: order.shippingAddress?.pincode,
+				},
+			};
+
+			return sendSuccess(res, "Order tracking details retrieved", trackingData);
+		} catch (error: any) {
+			console.error("Track order error:", error);
+			return sendError(res, error.message || "Failed to retrieve tracking details");
 		}
 	}
 

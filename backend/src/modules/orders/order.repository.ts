@@ -34,53 +34,90 @@ export class OrderRepository {
 	async createOrder(data: CreateOrderData) {
 		const orderNumber = this.generateOrderNumber();
 
-		return prisma.order.create({
-			data: {
-				orderNumber,
-				userId: data.userId,
-				subtotal: data.subtotal,
-				discount: data.discount || 0,
-				tax: data.tax,
-				shippingCharge: data.shippingCharge || 0,
-				total: data.total,
-				paymentMethod: data.paymentMethod,
-				shippingAddress: data.shippingAddress,
-				billingAddress: data.billingAddress,
-				customerNotes: data.customerNotes,
-				status: OrderStatus.CREATED, // Initial state
-				items: {
-					create: data.items.map((item) => ({
-						productId: item.productId,
-						quantity: item.quantity,
-						price: item.price,
-						discount: item.discount || 0,
-						subtotal: item.price * item.quantity - (item.discount || 0),
-					})),
-				},
-				timeline: {
-					create: {
-						status: OrderStatus.CREATED,
-						title: "Order Placed",
-						description: "Order has been created successfully.",
-						actor: "SYSTEM",
+		return prisma.$transaction(async (tx) => {
+			// 1. Verify stock and decrement inventory for each item
+			for (const item of data.items) {
+				const prod = await tx.product.findUnique({
+					where: { id: item.productId },
+					select: { id: true, name: true, inventory: true },
+				});
+
+				if (!prod) {
+					throw new Error(`Product not found: ${item.productId}`);
+				}
+
+				const currentInventory = (prod.inventory as any) || { quantity: 0, inStock: true };
+				const currentQty = typeof currentInventory.quantity === "number" ? currentInventory.quantity : 0;
+
+				if (currentQty < item.quantity) {
+					throw new Error(`Insufficient stock for product "${prod.name}". Available: ${currentQty}, Requested: ${item.quantity}`);
+				}
+
+				const newQty = currentQty - item.quantity;
+				await tx.product.update({
+					where: { id: item.productId },
+					data: {
+						inventory: {
+							...currentInventory,
+							quantity: newQty,
+							inStock: newQty > 0,
+						},
+					},
+				});
+			}
+
+			// 2. Create order record with line items and initial timeline
+			return tx.order.create({
+				data: {
+					orderNumber,
+					userId: data.userId,
+					subtotal: data.subtotal,
+					discount: data.discount || 0,
+					tax: data.tax,
+					shippingCharge: data.shippingCharge || 0,
+					total: data.total,
+					paymentMethod: data.paymentMethod,
+					shippingAddress: data.shippingAddress,
+					billingAddress: data.billingAddress,
+					customerNotes: data.customerNotes,
+					status: OrderStatus.CREATED, // Initial state
+					items: {
+						create: data.items.map((item) => ({
+							productId: item.productId,
+							quantity: item.quantity,
+							price: item.price,
+							discount: item.discount || 0,
+							subtotal: item.price * item.quantity - (item.discount || 0),
+						})),
+					},
+					timeline: {
+						create: {
+							status: OrderStatus.CREATED,
+							title: "Order Placed",
+							description: "Order has been created successfully.",
+							actor: "SYSTEM",
+						},
 					},
 				},
-			},
-			include: {
-				items: {
-					include: {
-						product: true,
+				include: {
+					items: {
+						include: {
+							product: true,
+						},
+					},
+					user: {
+						select: {
+							id: true,
+							name: true,
+							email: true,
+							phone: true,
+						},
 					},
 				},
-				user: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						phone: true,
-					},
-				},
-			},
+			});
+		}, {
+			maxWait: 10000,
+			timeout: 20000,
 		});
 	}
 
@@ -277,6 +314,7 @@ export class OrderRepository {
 				slug: true,
 				images: true,
 				thumbnail: true,
+				inventory: true,
 			},
 		});
 	}
@@ -284,6 +322,6 @@ export class OrderRepository {
 	private generateOrderNumber(): string {
 		const timestamp = Date.now().toString(36).toUpperCase();
 		const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-		return `TRV${timestamp}${random}`;
+		return `BBH${timestamp}${random}`;
 	}
 }

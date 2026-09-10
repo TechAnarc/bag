@@ -440,4 +440,12 @@ export class OrderService {
 		const order = await this.orderRepo.getOrderById(orderId);
 		return OrderService.normalizeOrder(order);
 	}
+
+	/**
+	 * Get order by Order Number (Public Tracking)
+	 */
+	async getOrderByNumber(orderNumber: string) {
+		const order = await this.orderRepo.getOrderByNumber(orderNumber);
+		return OrderService.normalizeOrder(order);
+	}
 }

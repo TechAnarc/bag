@@ -114,3 +114,53 @@ export const resetProducts = () => {
 
 export const inr = (n: number) =>
   new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n);
+
+/**
+ * Adapt backend Express/Prisma product entity to the Bombay Bag House storefront Product model
+ */
+export const adaptBackendProduct = (p: any): Product => {
+  const specs = p.specifications || {};
+  const inv = p.inventory || {};
+  const sellingPrice = p.sellingPrice || p.price || 0;
+  const basePrice = p.basePrice || p.price * 1.3;
+  const wasPrice = basePrice > sellingPrice ? basePrice : undefined;
+
+  // Derive category slug cleanly
+  let categorySlug = p.category?.slug || "handbags";
+  if (categorySlug.includes("tote")) categorySlug = "handbags";
+  else if (categorySlug.includes("laptop")) categorySlug = "office";
+  else if (categorySlug.includes("school")) categorySlug = "school";
+  else if (categorySlug.includes("travel")) categorySlug = "travel";
+  else if (categorySlug.includes("backpack")) categorySlug = "backpacks";
+  else if (categorySlug.includes("wallet")) categorySlug = "wallets";
+  else if (categorySlug.includes("sling")) categorySlug = "sling";
+  else if (categorySlug.includes("duffel")) categorySlug = "duffel";
+  else if (categorySlug.includes("clutch")) categorySlug = "signature";
+
+  const images = Array.isArray(p.images) && p.images.length > 0 
+    ? p.images 
+    : [p.thumbnail || "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=800&q=80"];
+
+  return {
+    id: p.id,
+    slug: p.slug || p.id,
+    name: p.name,
+    category: categorySlug,
+    gender: (p.gender?.toLowerCase() as any) || "unisex",
+    ageGroup: (specs.ageGroup?.toLowerCase() as any) || "adult",
+    price: sellingPrice,
+    was: wasPrice,
+    brand: specs.brand || "Bombay Bag House",
+    color: specs.color || "Classic",
+    material: specs.material || "Premium Leather",
+    size: specs.dimensions || specs.capacity || "Standard",
+    rating: typeof p.rating === "number" ? p.rating : 4.8,
+    reviewCount: Array.isArray(p.reviews) ? p.reviews.length : (p.reviewCount || 42),
+    stock: typeof inv.quantity === "number" ? inv.quantity : 25,
+    isNew: p.isTrending || p.isFeatured,
+    isBestseller: p.isFeatured,
+    badge: p.shortTagline ? undefined : "Handcrafted",
+    description: p.description || "Crafted with precision for everyday luxury and enduring elegance.",
+    images: images.length >= 2 ? images : [...images, images[0]],
+  };
+};
