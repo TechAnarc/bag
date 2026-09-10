@@ -1,8 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { bootstrapAdmin } from "@/lib/admin.functions";
 import { toast } from "sonner";
 import { Loader2, Lock } from "lucide-react";
 
@@ -11,10 +8,17 @@ export const Route = createFileRoute("/admin-signin")({
   component: SignIn,
 });
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000/api/v1";
+
+/**
+ * Wave 1 — Admin Sign-In
+ * Auth authority: Triveni Express backend (/api/v1/admin/auth/login)
+ * Token: JWT stored in localStorage "admin_access_token" (Dual-Tap pattern)
+ * Visual: Preserved Bombay Bag House dark login theme (gold/ink/cream)
+ */
 function SignIn() {
   const nav = useNavigate();
-  const bootstrap = useServerFn(bootstrapAdmin);
-  const [email, setEmail] = useState("trivenibag@gmail.com");
+  const [email, setEmail] = useState("admin@trivenibombaybaghouse.com");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -22,17 +26,27 @@ function SignIn() {
     e.preventDefault();
     setLoading(true);
     try {
-      // Try login first
-      let { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error && (error.message.toLowerCase().includes("invalid") || error.message.toLowerCase().includes("credentials"))) {
-        // Try bootstrap (no-op if admin already exists)
-        const res = await bootstrap({ data: { email, password } });
-        if (res.ok) {
-          const retry = await supabase.auth.signInWithPassword({ email, password });
-          error = retry.error;
-        }
+      const res = await fetch(`${API_BASE}/admin/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Invalid credentials");
       }
-      if (error) throw error;
+
+      // Dual-Tap: store token in localStorage for Bearer header injection
+      const token = data.data?.token || data.token;
+      if (token) {
+        localStorage.setItem("admin_access_token", token);
+      } else {
+        throw new Error("No token received from server");
+      }
+
       toast.success("Welcome back");
       nav({ to: "/admin" as any });
     } catch (err: any) {
@@ -51,7 +65,7 @@ function SignIn() {
               <Lock className="size-6 text-gold" />
             </div>
             <h1 className="mt-4 font-serif text-3xl tracking-tight">TBH Admin Console</h1>
-            <p className="mt-1 text-sm text-cream/50">Triveni Bombay Bag House · Enterprise</p>
+            <p className="mt-1 text-sm text-cream/50">Bombay Bag House · Enterprise Mission Control</p>
           </div>
           <form
             onSubmit={onSubmit}
@@ -86,7 +100,7 @@ function SignIn() {
               Sign in
             </button>
             <p className="text-center text-[11px] text-cream/40">
-              First-time setup: enter the seeded credentials to provision your admin account.
+              Secured by Triveni Commerce Engine · JWT Authentication
             </p>
           </form>
         </div>

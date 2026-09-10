@@ -5,7 +5,6 @@ import {
   Ticket, Image, Megaphone, Mail, BarChart3, FileText, CreditCard, Truck,
   Undo2, Settings, User, LogOut, Search, Bell, Sun, Moon, Plus, Menu, X,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 type NavItem = { to: string; label: string; icon: any; exact?: boolean };
@@ -34,11 +33,23 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [dark, setDark] = useState(false);
   const pathname = useRouterState({ select: (r) => r.location.pathname });
+  const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000/api/v1";
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    toast.success("Signed out");
-    window.location.href = "/admin-signin";
+    const token = localStorage.getItem("admin_access_token");
+    try {
+      if (token) {
+        await fetch(`${API_BASE}/admin/auth/logout`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include",
+        });
+      }
+    } catch { /* silent — always log out locally */ } finally {
+      localStorage.removeItem("admin_access_token");
+      toast.success("Signed out");
+      window.location.href = "/admin-signin";
+    }
   };
 
   return (

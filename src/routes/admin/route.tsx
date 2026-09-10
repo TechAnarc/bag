@@ -1,21 +1,51 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
-import { supabase } from "@/integrations/supabase/client";
 import { AdminShell } from "@/components/admin-shell";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000/api/v1";
+
+/**
+ * Wave 1 — Admin Route Guard
+ * Auth authority: Triveni Express backend JWT (admin@trivenibombaybaghouse.com)
+ * Token storage: localStorage "admin_access_token" (Dual-Tap pattern)
+ * Visual shell: Bombay Bag House existing AdminShell (gold/ink/cream theme)
+ */
 export const Route = createFileRoute("/admin")({
   ssr: false,
   beforeLoad: async () => {
-    const { data } = await supabase.auth.getUser();
-    if (!data.user) throw redirect({ to: "/admin-signin" as any });
-    const { data: isAdmin } = await supabase.rpc("has_role", {
-      _user_id: data.user.id,
-      _role: "admin",
-    });
-    if (!isAdmin) {
-      await supabase.auth.signOut();
+    const token = typeof window !== "undefined"
+      ? localStorage.getItem("admin_access_token")
+      : null;
+
+    if (!token) {
       throw redirect({ to: "/admin-signin" as any });
     }
-    return { userId: data.user.id };
+
+    try {
+      const res = await fetch(`${API_BASE}/admin/profile`, {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        localStorage.removeItem("admin_access_token");
+        throw redirect({ to: "/admin-signin" as any });
+      }
+
+      const data = await res.json();
+      const admin = data?.data;
+
+      if (!admin || !["ADMIN", "SUPER_ADMIN"].includes(admin.role)) {
+        localStorage.removeItem("admin_access_token");
+        throw redirect({ to: "/admin-signin" as any });
+      }
+
+      return { adminId: admin.id, adminRole: admin.role, adminEmail: admin.email };
+    } catch (e: any) {
+      // Only redirect if it's not already a redirect
+      if (e?.isRedirect) throw e;
+      localStorage.removeItem("admin_access_token");
+      throw redirect({ to: "/admin-signin" as any });
+    }
   },
   component: Layout,
 });

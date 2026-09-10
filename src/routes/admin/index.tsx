@@ -1,12 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { getDashboardStats, listRecentOrders } from "@/lib/admin.functions";
+import { adminApi } from "@/features/admin/services/adminApi";
 import { Card, PageHeader, EmptyState } from "@/components/admin-shell";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import {
   IndianRupee, ShoppingBag, Users, Package, TrendingUp, AlertTriangle,
-  Ticket, Mail, Star, PackageX, CheckCircle2, XCircle, Clock,
+  PackageX, CheckCircle2, XCircle, Clock, Star,
 } from "lucide-react";
 
 export const Route = createFileRoute("/admin/")({ component: Dashboard });
@@ -16,7 +15,7 @@ const rupee = (n: number) => "₹" + Math.round(n).toLocaleString("en-IN");
 function Kpi({
   label, value, icon: Icon, tone = "default",
 }: { label: string; value: string | number; icon: any; tone?: "default" | "gold" | "warn" | "danger" | "good" }) {
-  const toneMap = {
+  const toneMap: Record<string, string> = {
     default: "text-black/70 dark:text-cream/70",
     gold: "text-gold",
     warn: "text-amber-500",
@@ -35,49 +34,60 @@ function Kpi({
 }
 
 function Dashboard() {
-  const stats = useServerFn(getDashboardStats);
-  const orders = useServerFn(listRecentOrders);
-  const s = useQuery({ queryKey: ["admin", "stats"], queryFn: () => stats() });
-  const o = useQuery({ queryKey: ["admin", "recent-orders"], queryFn: () => orders() });
+  const s = useQuery({
+    queryKey: ["admin", "stats"],
+    queryFn: async () => (await adminApi.getDashboardStats()).data,
+  });
+  const chart = useQuery({
+    queryKey: ["admin", "chart"],
+    queryFn: async () => (await adminApi.getChartData(14)).data,
+  });
+  const o = useQuery({
+    queryKey: ["admin", "recent-orders"],
+    queryFn: async () => {
+      const result = await adminApi.getOrders({ limit: 10 });
+      return result.data?.orders ?? [];
+    },
+  });
 
   const d = s.data;
+  const c = chart.data;
+
   return (
     <>
       <PageHeader
         title="Dashboard"
-        subtitle="A real-time view of everything happening in your store."
+        subtitle="Real-time view of Bombay Bag House — powered by Triveni Commerce Engine."
       />
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4 xl:grid-cols-4">
-        <Kpi label="Revenue · Today" value={rupee(d?.revenueToday ?? 0)} icon={IndianRupee} tone="gold" />
-        <Kpi label="Orders · Today" value={d?.ordersToday ?? 0} icon={ShoppingBag} />
-        <Kpi label="Revenue · Month" value={rupee(d?.revenueMonth ?? 0)} icon={TrendingUp} tone="gold" />
-        <Kpi label="Orders · Month" value={d?.ordersMonth ?? 0} icon={ShoppingBag} />
-        <Kpi label="Pending Orders" value={d?.pending ?? 0} icon={Clock} tone="warn" />
-        <Kpi label="Delivered" value={d?.delivered ?? 0} icon={CheckCircle2} tone="good" />
-        <Kpi label="Cancelled" value={d?.cancelled ?? 0} icon={XCircle} tone="danger" />
-        <Kpi label="Average Order Value" value={rupee(d?.avgOrderValue ?? 0)} icon={IndianRupee} />
-        <Kpi label="Customers" value={d?.customers ?? 0} icon={Users} />
-        <Kpi label="Products" value={d?.products ?? 0} icon={Package} />
-        <Kpi label="Out of Stock" value={d?.outOfStock ?? 0} icon={PackageX} tone="danger" />
-        <Kpi label="Low Stock" value={d?.lowStock ?? 0} icon={AlertTriangle} tone="warn" />
-        <Kpi label="Coupons Active" value={d?.couponsActive ?? 0} icon={Ticket} />
-        <Kpi label="Subscribers" value={d?.subscribers ?? 0} icon={Mail} />
-        <Kpi label="Reviews" value={d?.reviews ?? 0} icon={Star} />
-        <Kpi label="Lifetime Revenue" value={rupee(d?.revenueAll ?? 0)} icon={IndianRupee} tone="gold" />
+        <Kpi label="Total Revenue" value={rupee(d?.totalRevenue ?? 0)} icon={IndianRupee} tone="gold" />
+        <Kpi label="Total Orders" value={d?.totalOrders ?? 0} icon={ShoppingBag} />
+        <Kpi label="Recent Revenue" value={rupee(d?.recentRevenue ?? 0)} icon={TrendingUp} tone="gold" />
+        <Kpi label="Total Users" value={d?.totalUsers ?? 0} icon={Users} />
+
+        <Kpi label="Pending Orders" value={d?.pendingOrders ?? 0} icon={Clock} tone="warn" />
+        <Kpi label="Total Products" value={d?.totalProducts ?? 0} icon={Package} />
+        <Kpi label="Out of Stock" value={d?.outOfStockProducts ?? 0} icon={PackageX} tone="danger" />
+        <Kpi label="Recent Users" value={d?.recentUsers ?? 0} icon={Users} />
+
+        <Kpi label="UPIS · High Value" value={d?.upisStats?.highValue ?? 0} icon={Star} tone="gold" />
+        <Kpi label="UPIS · At Risk" value={d?.upisStats?.atRisk ?? 0} icon={AlertTriangle} tone="warn" />
+        <Kpi label="UPIS · Loyal" value={d?.upisStats?.loyal ?? 0} icon={CheckCircle2} tone="good" />
+        <Kpi label="Churn Alerts" value={d?.upisStats?.churnAlerts ?? 0} icon={XCircle} tone="danger" />
       </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-3">
         <Card className="xl:col-span-2">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <h3 className="font-serif text-xl">Sales · Last 14 days</h3>
-              <p className="text-xs text-black/50 dark:text-cream/50">Revenue and order volume</p>
+              <h3 className="font-serif text-xl">Revenue Trend · Last 14 days</h3>
+              <p className="text-xs text-black/50 dark:text-cream/50">Triveni Commerce Engine telemetry</p>
             </div>
           </div>
           <div className="h-72">
             <ResponsiveContainer>
-              <AreaChart data={d?.series ?? []}>
+              <AreaChart data={c?.revenueChart ?? []}>
                 <defs>
                   <linearGradient id="rev" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#c9a961" stopOpacity={0.5} />
@@ -85,11 +95,16 @@ function Dashboard() {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" />
-                <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(v) => v.slice(5)} />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 10 }}
+                  tickFormatter={(v) => new Date(v).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                />
                 <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip
                   contentStyle={{ borderRadius: 8, border: "1px solid rgba(0,0,0,0.1)", fontSize: 12 }}
-                  formatter={(v: any, k: string) => (k === "revenue" ? rupee(Number(v)) : v)}
+                  formatter={(v: number, k: string) => (k === "revenue" ? rupee(Number(v)) : v)}
+                  labelFormatter={(v) => new Date(v as string).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                 />
                 <Area type="monotone" dataKey="revenue" stroke="#c9a961" strokeWidth={2} fill="url(#rev)" />
               </AreaChart>
@@ -98,15 +113,15 @@ function Dashboard() {
         </Card>
 
         <Card>
-          <h3 className="font-serif text-xl">Order status</h3>
-          <p className="text-xs text-black/50 dark:text-cream/50">Live snapshot</p>
+          <h3 className="font-serif text-xl">UPIS Lifecycle</h3>
+          <p className="text-xs text-black/50 dark:text-cream/50">Triveni Predictive Intelligence</p>
           <div className="mt-5 space-y-3">
             {[
-              ["Pending", d?.pending ?? 0, "bg-amber-500"],
-              ["Delivered", d?.delivered ?? 0, "bg-emerald-500"],
-              ["Cancelled", d?.cancelled ?? 0, "bg-red-500"],
+              ["High Value", d?.upisStats?.highValue ?? 0, "bg-[#c9a961]"],
+              ["Loyal", d?.upisStats?.loyal ?? 0, "bg-emerald-500"],
+              ["At Risk", d?.upisStats?.atRisk ?? 0, "bg-red-500"],
             ].map(([label, v, color]) => {
-              const total = (d?.ordersAll ?? 0) || 1;
+              const total = (d?.totalUsers ?? 0) || 1;
               const pct = Math.round((Number(v) / total) * 100);
               return (
                 <div key={label as string}>
@@ -127,7 +142,7 @@ function Dashboard() {
       <div className="mt-6">
         <Card>
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="font-serif text-xl">Recent orders</h3>
+            <h3 className="font-serif text-xl">Recent Orders</h3>
           </div>
           {o.isLoading ? (
             <p className="py-8 text-center text-sm text-black/40">Loading…</p>
@@ -149,12 +164,12 @@ function Dashboard() {
                 <tbody>
                   {(o.data ?? []).map((r: any) => (
                     <tr key={r.id} className="border-b border-black/5 dark:border-white/5">
-                      <td className="py-3 font-mono text-xs">{r.order_number}</td>
-                      <td>{r.customer_name}</td>
+                      <td className="py-3 font-mono text-xs">{r.orderNumber}</td>
+                      <td>{r.customerName}</td>
                       <td><span className="rounded-full bg-black/5 px-2 py-0.5 text-xs dark:bg-white/10">{r.status}</span></td>
-                      <td className="text-xs">{r.payment_status}</td>
-                      <td className="text-xs text-black/50 dark:text-cream/50">{new Date(r.created_at).toLocaleDateString("en-IN")}</td>
-                      <td className="text-right font-medium">{rupee(Number(r.total))}</td>
+                      <td className="text-xs">{r.paymentStatus}</td>
+                      <td className="text-xs text-black/50 dark:text-cream/50">{new Date(r.createdAt).toLocaleDateString("en-IN")}</td>
+                      <td className="text-right font-medium">{rupee(Number(r.totalAmount))}</td>
                     </tr>
                   ))}
                 </tbody>

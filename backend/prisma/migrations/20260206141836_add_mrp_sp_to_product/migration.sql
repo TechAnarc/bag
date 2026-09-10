@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Product" ADD COLUMN     "basePrice" DOUBLE PRECISION DEFAULT 0,
+ADD COLUMN     "sellingPrice" DOUBLE PRECISION DEFAULT 0;
