@@ -46,7 +46,7 @@ export const createProductSchema = z
 	.object({
 		name: z.string().min(2, "Name must be at least 2 characters"),
 		categoryId: z.string().min(1, "Category is required"),
-		price: z.number().positive("Price must be positive"), // Keeping for compatibility, usually maps to sellingPrice
+		price: z.number().positive("Price must be positive").optional(), // Will default to sellingPrice
 		basePrice: z.number().positive("Base price must be positive"),
 		sellingPrice: z.number().positive("Selling price must be positive"),
 		ownerPrice: z
@@ -57,29 +57,44 @@ export const createProductSchema = z
 		description: z.string().optional(),
 		shortTagline: z.string().optional(),
 		platingType: z.string().optional(),
-		images: z.array(z.string()).min(1, "At least 1 product image is required"),
+		images: z.array(z.string()).min(1, "At least 1 product image is required").default(["https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=500&q=80"]),
 		specifications: z
 			.object({
 				weight: z.string().optional(),
 				material: z.string().optional(),
+				capacity: z.string().optional(),
+				dimensions: z.string().optional(),
+				compartments: z.union([z.number(), z.string()]).optional(),
+				closureType: z.string().optional(),
+				strapType: z.string().optional(),
+				laptopCompatible: z.union([z.boolean(), z.string()]).optional(),
+				waterResistant: z.union([z.boolean(), z.string()]).optional(),
+				color: z.string().optional(),
 				occasion: z.string().optional(),
 				brand: z.string().optional(),
 				packageContents: z.string().optional(),
 			})
+			.passthrough()
 			.optional(),
 		inventory: z
 			.object({
 				quantity: z.number().int().min(0).optional(),
 				inStock: z.boolean().optional(),
 			})
+			.passthrough()
 			.optional(),
 		seo: z
 			.object({
 				metaTitle: z.string().optional(),
 				metaDescription: z.string().optional(),
 			})
+			.passthrough()
 			.optional(),
 	})
+	.transform((data) => ({
+		...data,
+		price: data.price || data.sellingPrice,
+	}))
 	.refine((data) => data.sellingPrice <= data.basePrice, {
 		message: "Selling price cannot be greater than base price (MRP)",
 		path: ["sellingPrice"],

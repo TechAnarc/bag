@@ -340,4 +340,31 @@ export const adminApi = {
         const response = await api.post("/admin/mobile/register-device", data);
         return response.data;
     },
+
+    // Create Product
+    async createProduct(data: any) {
+        const response = await api.post('/admin/products', data);
+        return response.data;
+    },
+
+    // Category CRUD
+    async getCategories() {
+        const response = await api.get('/categories');
+        return response.data;
+    },
+
+    async createCategory(data: { name: string; isActive?: boolean }) {
+        const response = await api.post('/categories', data);
+        return response.data;
+    },
+
+    async updateCategory(id: string, data: { name?: string; isActive?: boolean }) {
+        const response = await api.put(`/categories/${id}`, data);
+        return response.data;
+    },
+
+    async deleteCategory(id: string) {
+        const response = await api.delete(`/categories/${id}`);
+        return response.data;
+    },
 };
