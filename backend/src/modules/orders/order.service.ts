@@ -209,7 +209,19 @@ export class OrderService {
 		};
 
 		// Create order (inventory deduction uses SELECT FOR UPDATE inside createOrder)
-		const order = await this.orderRepo.createOrder(orderData);
+		let order: any;
+		try {
+			order = await this.orderRepo.createOrder(orderData);
+		} catch (err: any) {
+			if (idempotencyKey && (err.code === "P2002" || err.message?.includes("idempotencyKey"))) {
+				const existing = await IdempotencyService.check(idempotencyKey);
+				if (existing) {
+					console.log(`[OrderService] Concurrent idempotency collision resolved cleanly for key: ${idempotencyKey}`);
+					return { order: existing, isDuplicate: true };
+				}
+			}
+			throw err;
+		}
 
 		// Apply coupon usage atomically in a separate transaction
 		// (AFTER order is committed, so partial failure rolls back coupon increment separately)

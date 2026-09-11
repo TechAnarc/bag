@@ -22,6 +22,7 @@ export class OrderController {
 				items,
 				deliveryMethod,
 				couponCode,
+				idempotencyKey,
 			} = req.body;
 
 			if (!paymentMethod || !shippingAddress) {
@@ -76,7 +77,7 @@ export class OrderController {
 				shippingAddress,
 				billingAddress,
 				customerNotes,
-				undefined, // idempotencyKey
+				idempotencyKey,
 				items, // directItems from frontend
 				deliveryMethod,
 				couponCode,

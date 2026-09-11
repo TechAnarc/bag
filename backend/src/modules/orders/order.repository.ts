@@ -28,6 +28,10 @@ export interface CreateOrderData {
 	slaDeadline?: Date;
 	isFlagged?: boolean;
 	riskLevel?: string;
+	idempotencyKey?: string;
+	couponCode?: string;
+	couponId?: string;
+	couponDiscount?: number;
 }
 
 export class OrderRepository {
@@ -78,6 +82,10 @@ export class OrderRepository {
 					shippingAddress: data.shippingAddress,
 					billingAddress: data.billingAddress,
 					customerNotes: data.customerNotes,
+					idempotencyKey: data.idempotencyKey || null,
+					couponCode: data.couponCode || null,
+					couponId: data.couponId || null,
+					couponDiscount: data.couponDiscount || 0,
 					status: OrderStatus.CREATED, // Initial state
 					items: {
 						create: data.items.map((item) => ({

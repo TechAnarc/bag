@@ -4,6 +4,7 @@ import { logger } from "../../config/logger";
 export class MailService {
 	private transporter: nodemailer.Transporter;
 	private isConfigured: boolean = false;
+	private defaultFrom: string = "";
 
 	constructor() {
 		const hasSmtpConfig = process.env.SMTP_USER && process.env.SMTP_PASS;
@@ -25,12 +26,14 @@ export class MailService {
 		this.transporter = nodemailer.createTransport({
 			host: process.env.SMTP_HOST || "smtp.gmail.com",
 			port: parseInt(process.env.SMTP_PORT || "587"),
-			secure: process.env.SMTP_PORT === "465", // true for 465, false for other ports
+			secure: process.env.SMTP_SECURE === "true",
 			auth: {
 				user: process.env.SMTP_USER,
 				pass: process.env.SMTP_PASS,
 			},
 		});
+
+		this.defaultFrom = `"${process.env.SMTP_FROM_NAME || "Bombay Bag House"}" <${process.env.SMTP_FROM_EMAIL || "support@bombaybaghouse.com"}>`;
 
 		// Verify connection on startup only if configured (Non-blocking, Warn-only)
 		this.transporter.verify((error) => {
@@ -118,7 +121,7 @@ export class MailService {
 					<h3 style="margin-top: 0;">Message:</h3>
 					<p style="white-space: pre-wrap;">${data.message}</p>
 				</div>
-				<p style="font-size: 12px; color: #888; margin-top: 30px; text-align: center;">Sent from Triveni 1 Gram Jewellers Platform</p>
+				<p style="font-size: 12px; color: #888; margin-top: 30px; text-align: center;">Sent from Bombay Bag House Platform</p>
 			</div>
 		`;
 
@@ -135,8 +138,8 @@ export class MailService {
 		const html = `
 			<div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333; line-height: 1.6;">
 				<div style="background: #1a1a2e; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-					<h1 style="color: #ffd700; margin: 0; font-family: serif;">Triveni Jewellers</h1>
-					<p style="color: #a0a0a0; margin: 5px 0 0;">Exquisite 1 Gram Gold Jewellery</p>
+					<h1 style="color: #ffd700; margin: 0; font-family: serif;">Bombay Bag House</h1>
+					<p style="color: #a0a0a0; margin: 5px 0 0;">Luxury Handbags & Accessories</p>
 				</div>
 				
 				<div style="padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
@@ -172,7 +175,7 @@ export class MailService {
 				</div>
 				
 				<div style="text-align: center; margin-top: 20px; color: #888; font-size: 12px;">
-					<p>&copy; ${new Date().getFullYear()} Triveni 1 Gram Jewellers. All rights reserved.</p>
+					<p>&copy; ${new Date().getFullYear()} Bombay Bag House. All rights reserved.</p>
 				</div>
 			</div>
 		`;
@@ -264,7 +267,7 @@ export class MailService {
 				</div>
 
 				<div style="text-align: center; margin-top: 30px; font-size: 11px; color: #aaa;">
-					<p>Triveni 1 Gram Jewellers | GSTIN: XXXXXXXXXX</p>
+					<p>Bombay Bag House | GSTIN: XXXXXXXXXX</p>
 					<p>This is a computer-generated invoice.</p>
 				</div>
 			</div>
@@ -285,7 +288,7 @@ export class MailService {
 		const html = `
 			<div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 500px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 12px; overflow: hidden; color: #333;">
 				<div style="background: #1a1a2e; padding: 25px; text-align: center;">
-					<h1 style="color: #ffd700; margin: 0; font-family: serif;">Triveni Jewellers</h1>
+					<h1 style="color: #ffd700; margin: 0; font-family: serif;">Bombay Bag House</h1>
 				</div>
 				<div style="padding: 30px; text-align: center; background: #fff;">
 					<h2 style="color: #4b0082; margin-top: 0;">Verification Code</h2>
@@ -297,7 +300,7 @@ export class MailService {
 					<p style="color: #666; font-size: 14px;">If you didn't request this code, please ignore this email or contact support if you have concerns.</p>
 				</div>
 				<div style="background: #f9f9f9; padding: 20px; text-align: center; font-size: 12px; color: #888;">
-					<p>&copy; ${new Date().getFullYear()} Triveni 1 Gram Jewellers. <br/> Safety First: We never ask for your password or OTP via call or text.</p>
+					<p>&copy; ${new Date().getFullYear()} Bombay Bag House. <br/> Safety First: We never ask for your password or OTP via call or text.</p>
 				</div>
 			</div>
 		`;

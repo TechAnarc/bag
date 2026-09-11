@@ -87,7 +87,7 @@ export default function AdminProductsPage() {
       material: '',
       surfaceFinish: '',
       occasion: '',
-      brand: 'Triveni Jewellers',
+      brand: 'Bombay Bag House',
       packageContents: ''
     },
     inventory: {

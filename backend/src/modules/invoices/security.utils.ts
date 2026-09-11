@@ -46,7 +46,7 @@ export function verifyInvoiceHash(
  */
 export async function generateVerificationQR(
 	invoiceId: string,
-	baseUrl: string = "https://trivenijewellers.com",
+	baseUrl: string = "https://bombaybaghouse.onrender.com",
 ): Promise<string> {
 	const verificationUrl = `${baseUrl}/verify-invoice/${invoiceId}`;
 

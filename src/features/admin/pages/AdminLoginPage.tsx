@@ -340,7 +340,7 @@ export default function AdminLoginPage() {
 			{/* Footer */}
 			<div className="absolute bottom-8 left-0 right-0 text-center">
 				<p className="text-slate-500 text-sm">
-					© {new Date().getFullYear()} Triveni 1 Gram Jewellers. All rights reserved.
+					© {new Date().getFullYear()} Bombay Bag House. All rights reserved.
 				</p>
 			</div>
 
