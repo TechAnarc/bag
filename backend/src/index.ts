@@ -103,6 +103,8 @@ app.use(
 						...envConfiguredOrigins,
 						"https://trivenibombaybaghouse.vercel.app",
 						"https://trivenibombaybaghouse.onrender.com",
+						"https://bombaybaghouse.onrender.com",
+						"https://bombaybaghouse.vercel.app",
 					]),
 				);
 

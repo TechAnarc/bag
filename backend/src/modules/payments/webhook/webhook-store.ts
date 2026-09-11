@@ -57,8 +57,7 @@ export class WebhookStore {
 				},
 			});
 
-			// If a record was just created vs pre-existing, detect via creation timestamp gap
-			// We query separately to detect duplicates; the upsert no-op means existing = duplicate
+			// 2. Fetch full record with timestamps to detect duplicate
 			const existing = await (prisma as any).webhookEvent.findUnique({
 				where: { eventId },
 				select: {
@@ -73,10 +72,19 @@ export class WebhookStore {
 
 			if (!existing) return null;
 
-			// If already processed, signal caller to skip processing
-			if (["PROCESSED", "DEAD_LETTERED"].includes(existing.status)) {
+			// If already processed or processing, skip processing
+			if (["PROCESSED", "PROCESSING", "DEAD_LETTERED"].includes(existing.status)) {
 				logger.info(
 					`[WebhookStore] Duplicate event skipped: ${eventId} (status=${existing.status})`,
+				);
+				return null;
+			}
+
+			// If createdAt is older than 2 seconds, it was an existing record created by an earlier request
+			const ageMs = Date.now() - new Date(existing.createdAt).getTime();
+			if (ageMs > 2000) {
+				logger.info(
+					`[WebhookStore] Duplicate event skipped by age: ${eventId} (age=${ageMs}ms)`,
 				);
 				return null;
 			}

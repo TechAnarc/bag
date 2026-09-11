@@ -79,6 +79,7 @@ export class OrderController {
 				undefined, // idempotencyKey
 				items, // directItems from frontend
 				deliveryMethod,
+				couponCode,
 			);
 
 			return sendSuccess(res, "Order created successfully", result, 201);

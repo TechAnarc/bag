@@ -26,6 +26,7 @@ export const PRICING_CONFIG = {
 export function calculateOrderTotals(
 	items: { price: number; mrp: number; quantity: number }[],
 	deliveryMethod?: string,
+	couponDiscount: number = 0,
 ): PricingTotals {
 	// 1. Calculate Base Item Totals
 	const mrp_total = items.reduce(
@@ -36,22 +37,23 @@ export function calculateOrderTotals(
 		(sum, item) => sum + item.price * item.quantity,
 		0,
 	);
-	const discount_total = mrp_total - item_total;
+	const safeCouponDiscount = Math.min(Math.max(0, couponDiscount), item_total);
+	const discount_total = (mrp_total - item_total) + safeCouponDiscount;
 
 	// 2. Platform Fee & Tax (calculated as part of item_total/reporting, already included in selling price)
 	const platform_fee = Math.round(
-		item_total * PRICING_CONFIG.PLATFORM_FEE_RATE,
+		(item_total - safeCouponDiscount) * PRICING_CONFIG.PLATFORM_FEE_RATE,
 	);
-	const tax = Math.round(item_total * PRICING_CONFIG.GST_RATE);
+	const tax = Math.round((item_total - safeCouponDiscount) * PRICING_CONFIG.GST_RATE);
 
 	// 3. Shipping Calculation (Home Delivery Only)
 	const shipping =
-		item_total >= PRICING_CONFIG.SHIPPING_THRESHOLD
+		(item_total - safeCouponDiscount) >= PRICING_CONFIG.SHIPPING_THRESHOLD
 			? 0
 			: PRICING_CONFIG.SHIPPING_CHARGE;
 
-	// 4. Initial Grand Total (GST & Platform Fee are included in price, not added additionally)
-	const raw_grand_total = item_total + shipping;
+	// 4. Initial Grand Total (item_total - couponDiscount + shipping)
+	const raw_grand_total = Math.max(0, item_total - safeCouponDiscount + shipping);
 
 	// 5. Cash Roundoff Logic
 	// Rule: If decimal < 0.5 -> round down, If decimal >= 0.5 -> round up
@@ -60,7 +62,7 @@ export function calculateOrderTotals(
 	const cash_roundoff = Number((final_payable - raw_grand_total).toFixed(2));
 
 	// 6. Total Saved (MRP - Final Payable)
-	const total_saved = mrp_total - item_total;
+	const total_saved = mrp_total - final_payable;
 
 	return {
 		mrp_total,

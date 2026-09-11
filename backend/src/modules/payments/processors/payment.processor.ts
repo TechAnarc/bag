@@ -91,6 +91,9 @@ export async function handlePaymentAuthorized(
 						} as any,
 					},
 				});
+			}, {
+				maxWait: 10000,
+				timeout: 25000,
 			});
 		}
 	}
@@ -169,6 +172,12 @@ export async function handlePaymentCaptured(
 		});
 
 		if (order && order.paymentStatus !== "COMPLETED") {
+			// Link orderId to PaymentRecord
+			await (prisma as any).paymentRecord.updateMany({
+				where: { razorpayPaymentId: entity.id },
+				data: { orderId: order.id },
+			}).catch(() => {});
+
 			await prisma.$transaction(async (tx) => {
 				// 2a. Update order status
 				await tx.order.update({
@@ -220,6 +229,9 @@ export async function handlePaymentCaptured(
 					where: { orderId: order.id, status: "RESERVED" },
 					data: { status: "FULFILLED" },
 				});
+			}, {
+				maxWait: 10000,
+				timeout: 25000,
 			});
 
 			// 2e. Reconciliation
@@ -319,10 +331,11 @@ export async function handlePaymentFailed(
 		},
 	});
 
-	// 2. Update order state
+	// 2. Update order state and restore inventory
 	if (entity.order_id) {
 		const order = await prisma.order.findFirst({
 			where: { razorpayOrderId: entity.order_id },
+			include: { items: true },
 		});
 		if (order && order.paymentStatus !== "COMPLETED") {
 			await prisma.$transaction(async (tx) => {
@@ -350,11 +363,37 @@ export async function handlePaymentFailed(
 					},
 				});
 
+				// Restore stock for each item upon payment failure
+				for (const item of order.items) {
+					const prod = await tx.product.findUnique({
+						where: { id: item.productId },
+						select: { id: true, inventory: true },
+					});
+					if (prod) {
+						const currentInv = (prod.inventory as any) || { quantity: 0, inStock: true };
+						const currentQty = typeof currentInv.quantity === "number" ? currentInv.quantity : 0;
+						const restoredQty = currentQty + item.quantity;
+						await tx.product.update({
+							where: { id: item.productId },
+							data: {
+								inventory: {
+									...currentInv,
+									quantity: restoredQty,
+									inStock: restoredQty > 0,
+								},
+							},
+						});
+					}
+				}
+
 				// Release inventory reservations on failure
 				await tx.inventoryReservation.updateMany({
 					where: { orderId: order.id, status: "RESERVED" },
 					data: { status: "RELEASED" },
 				});
+			}, {
+				maxWait: 10000,
+				timeout: 25000,
 			});
 		}
 	}

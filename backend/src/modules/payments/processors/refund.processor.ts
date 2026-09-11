@@ -63,22 +63,36 @@ export async function handleRefundCreated(
 	// 3. Link order and update payment record status
 	const paymentRecord = await (prisma as any).paymentRecord.findUnique({
 		where: { razorpayPaymentId: entity.payment_id },
-	});
-	if (paymentRecord?.orderId) {
+	}).catch(() => null);
+
+	let orderId = paymentRecord?.orderId;
+	if (!orderId) {
+		const order = await prisma.order.findFirst({
+			where: {
+				OR: [
+					{ razorpayPaymentId: entity.payment_id },
+					...(paymentRecord?.razorpayOrderId ? [{ razorpayOrderId: paymentRecord.razorpayOrderId }] : []),
+				],
+			},
+		});
+		orderId = order?.id;
+	}
+
+	if (orderId) {
 		await (prisma as any).refundRecord.update({
 			where: { razorpayRefundId: entity.id },
-			data: { orderId: paymentRecord.orderId },
+			data: { orderId: orderId },
 		});
 
 		await prisma.$transaction(async (tx) => {
 			await tx.order.update({
-				where: { id: paymentRecord.orderId },
+				where: { id: orderId },
 				data: { paymentStatus: "REFUNDED", status: "REFUNDED" },
 			});
 			await tx.orderTimelineEvent.create({
 				data: {
 					id: uuidv4(),
-					orderId: paymentRecord.orderId,
+					orderId: orderId,
 					status: "REFUNDED",
 					title: "Refund Initiated",
 					description: `Refund of ₹${entity.amount / 100} initiated. Refund ID: ${entity.id}`,
@@ -91,7 +105,7 @@ export async function handleRefundCreated(
 				data: {
 					id: uuidv4(),
 					tenantId: "default",
-					orderId: paymentRecord.orderId,
+					orderId: orderId,
 					type: "DEBIT",
 					amount: entity.amount / 100,
 					currency: entity.currency,
@@ -103,12 +117,15 @@ export async function handleRefundCreated(
 					} as any,
 				},
 			});
+		}, {
+			maxWait: 10000,
+			timeout: 25000,
 		});
 
 		// Reconcile
 		await reconciliationService.record({
 			type: "REFUND",
-			orderId: paymentRecord.orderId,
+			orderId: orderId,
 			razorpayPaymentId: entity.payment_id,
 			razorpayRefundId: entity.id,
 			actualAmountPaise: entity.amount,

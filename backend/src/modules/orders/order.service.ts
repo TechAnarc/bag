@@ -63,11 +63,41 @@ export class OrderService {
 		idempotencyKey?: string,
 		directItems?: { productId: string; quantity: number }[],
 		deliveryMethod?: string, // 'SHIP' | 'PICKUP'
+		couponCode?: string,
 	) {
 		// 1. Idempotency Check
 		if (idempotencyKey) {
 			const existing = await IdempotencyService.check(idempotencyKey);
 			if (existing) return existing;
+		}
+
+		let couponDiscount = 0;
+		let appliedCouponCode: string | undefined = undefined;
+
+		// 2. Server-Side Coupon Authority Validation
+		if (couponCode && typeof couponCode === "string" && couponCode.trim().length > 0) {
+			const cleanCode = couponCode.trim().toUpperCase();
+			const configRecord = await (prisma as any).businessConfig.findFirst({
+				where: { key: "general_settings" },
+			});
+			const coupons: any[] = configRecord?.metadata?.coupons || [];
+			const matchedCoupon = coupons.find(
+				(c) => c.code?.toUpperCase() === cleanCode && c.isActive !== false,
+			);
+
+			if (matchedCoupon) {
+				appliedCouponCode = matchedCoupon.code;
+				if (matchedCoupon.type === "PERCENTAGE") {
+					// Calculated on base cart subtotal
+					const percent = Number(matchedCoupon.value) || 0;
+					couponDiscount = Math.round((cartSubtotal * percent) / 100);
+					if (matchedCoupon.maxDiscount && couponDiscount > matchedCoupon.maxDiscount) {
+						couponDiscount = matchedCoupon.maxDiscount;
+					}
+				} else if (matchedCoupon.type === "FIXED_AMOUNT") {
+					couponDiscount = Number(matchedCoupon.value) || 0;
+				}
+			}
 		}
 
 		let cartItems: any[] = [];
@@ -89,17 +119,33 @@ export class OrderService {
 				};
 			});
 
-			const totals = calculateOrderTotals(pricingItems, deliveryMethod);
+			// Calculate item_total for coupon percentage if applicable
+			const baseItemTotal = pricingItems.reduce((acc, p) => acc + p.price * p.quantity, 0);
+			if (appliedCouponCode && couponDiscount === 0) {
+				const configRecord = await (prisma as any).businessConfig.findFirst({
+					where: { key: "general_settings" },
+				});
+				const coupons: any[] = configRecord?.metadata?.coupons || [];
+				const matchedCoupon = coupons.find((c) => c.code?.toUpperCase() === appliedCouponCode);
+				if (matchedCoupon && (!matchedCoupon.minPurchase || baseItemTotal >= matchedCoupon.minPurchase)) {
+					if (matchedCoupon.type === "PERCENTAGE") {
+						couponDiscount = Math.round((baseItemTotal * (Number(matchedCoupon.value) || 0)) / 100);
+						if (matchedCoupon.maxDiscount && couponDiscount > matchedCoupon.maxDiscount) {
+							couponDiscount = matchedCoupon.maxDiscount;
+						}
+					} else if (matchedCoupon.type === "FIXED") {
+						couponDiscount = Number(matchedCoupon.value) || 0;
+					}
+				}
+			}
+
+			const totals = calculateOrderTotals(pricingItems, deliveryMethod, couponDiscount);
 			cartItems = directItems.map((item) => {
 				const product = products.find((p) => p.id === item.productId);
 				return { productId: item.productId, quantity: item.quantity, product };
 			});
 
-			// Map totals back to local variables expected by the prepared order Data
 			cartSubtotal = totals.item_total;
-			const totalsObj = totals; // for easier access
-
-			// We'll use the totals directly in the orderData preparation
 			const orderTotals = totals;
 			return this.finalizeOrderCreation(
 				userId,
@@ -125,7 +171,27 @@ export class OrderService {
 				mrp: item.product.basePrice || item.product.price * 1.5,
 				quantity: item.quantity,
 			}));
-			const totals = calculateOrderTotals(pricingItems, deliveryMethod);
+
+			const baseItemTotal = pricingItems.reduce((acc, p) => acc + p.price * p.quantity, 0);
+			if (appliedCouponCode && couponDiscount === 0) {
+				const configRecord = await (prisma as any).businessConfig.findFirst({
+					where: { key: "general_settings" },
+				});
+				const coupons: any[] = configRecord?.metadata?.coupons || [];
+				const matchedCoupon = coupons.find((c) => c.code?.toUpperCase() === appliedCouponCode);
+				if (matchedCoupon && (!matchedCoupon.minPurchase || baseItemTotal >= matchedCoupon.minPurchase)) {
+					if (matchedCoupon.type === "PERCENTAGE") {
+						couponDiscount = Math.round((baseItemTotal * (Number(matchedCoupon.value) || 0)) / 100);
+						if (matchedCoupon.maxDiscount && couponDiscount > matchedCoupon.maxDiscount) {
+							couponDiscount = matchedCoupon.maxDiscount;
+						}
+					} else if (matchedCoupon.type === "FIXED") {
+						couponDiscount = Number(matchedCoupon.value) || 0;
+					}
+				}
+			}
+
+			const totals = calculateOrderTotals(pricingItems, deliveryMethod, couponDiscount);
 
 			return this.finalizeOrderCreation(
 				userId,
@@ -242,6 +308,11 @@ export class OrderService {
 				PaymentStatus.PENDING,
 				{ razorpayOrderId: razorpayOrder.id },
 			);
+			await this.updateOrderStatus(
+				order.id,
+				OrderStatus.PAYMENT_PENDING,
+				"SYSTEM",
+			);
 			await this.cartService.clearUserCart(userId);
 
 			SocketService.emitToUser(userId, "order:created", order);
@@ -309,12 +380,12 @@ export class OrderService {
 			razorpaySignature,
 		});
 
-		const updatedOrder = await this.updateOrderStatus(
+		await this.updateOrderStatus(
 			orderId,
 			OrderStatus.PAYMENT_CONFIRMED,
 			"SYSTEM",
 		);
-		await this.updateOrderStatus(orderId, OrderStatus.PROCESSING, "SYSTEM");
+		const updatedOrder = await this.updateOrderStatus(orderId, OrderStatus.PROCESSING, "SYSTEM");
 
 		return {
 			success: true,

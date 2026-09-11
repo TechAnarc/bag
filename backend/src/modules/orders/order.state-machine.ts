@@ -5,6 +5,7 @@ export class OrderStateMachine {
 		[OrderStatus.CREATED]: [
 			OrderStatus.PAYMENT_PENDING,
 			OrderStatus.PAYMENT_CONFIRMED,
+			OrderStatus.FAILED,
 			OrderStatus.CANCELLED,
 			OrderStatus.ORDER_CREATED,
 		],
@@ -22,11 +23,13 @@ export class OrderStateMachine {
 			OrderStatus.PROCESSING,
 			OrderStatus.PICKUP_PENDING,
 			OrderStatus.CANCELLED,
+			OrderStatus.REFUNDED,
 		],
 		[OrderStatus.PROCESSING]: [
 			OrderStatus.PACKED,
 			OrderStatus.PICKUP_PENDING,
 			OrderStatus.CANCELLED,
+			OrderStatus.REFUNDED,
 		],
 		[OrderStatus.PACKED]: [
 			OrderStatus.PICKUP_PENDING,
