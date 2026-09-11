@@ -340,6 +340,13 @@ app.use(
 // All other payment routes (refund, fetch) are also mounted here.
 app.use("/api/v1/payments", paymentRoutes);
 
+app.use((req, res, next) => {
+	const correlationId = (req.headers["x-correlation-id"] || require("crypto").randomUUID()) as string;
+	req.headers["x-correlation-id"] = correlationId;
+	res.setHeader("x-correlation-id", correlationId);
+	next();
+});
+
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
