@@ -567,22 +567,27 @@ export class AdminService {
 
 	// ==================== Product Management ====================
 
-	async getProducts(page = 1, limit = 10, category = "all", search = "") {
+	async getProducts(page = 1, limit = 20, category = "all", search = "", status = "all") {
 		const skip = (page - 1) * limit;
 
-		const where: Prisma.ProductWhereInput = { isActive: true };
+		const where: Prisma.ProductWhereInput = {};
 
-		if (category !== "all") {
+		if (category !== "all" && category !== "ALL") {
 			(where as any).categoryId = category;
+		}
+
+		if (status !== "all" && status !== "ALL") {
+			(where as any).status = status;
 		}
 
 		if (search) {
 			where.OR = [
 				{ name: { contains: search, mode: "insensitive" } },
+				{ sku: { contains: search, mode: "insensitive" } },
 				{
 					category: { is: { name: { contains: search, mode: "insensitive" } } },
 				} as any,
-				{ sku: { contains: search, mode: "insensitive" } },
+				{ description: { contains: search, mode: "insensitive" } },
 			];
 		}
 
@@ -591,30 +596,38 @@ export class AdminService {
 				where,
 				skip,
 				take: limit,
-				select: {
-					id: true,
-					name: true,
-					slug: true,
+				include: {
 					category: {
-						select: { name: true },
+						select: { id: true, name: true, slug: true },
 					},
-					price: true,
-					discountPrice: true,
-					inventory: true,
-					thumbnail: true,
-					isActive: true,
-					isFeatured: true,
-					isTrending: true,
-					views: true,
-					createdAt: true,
 				},
 				orderBy: { createdAt: "desc" },
 			}),
 			prisma.product.count({ where }),
 		]);
 
+		const baseUrl = env.BACKEND_URL || "http://localhost:8080";
+		const normalizedProducts = products.map((p: any) => {
+			// Normalize stock count from inventory JSON if stock field not present
+			const inventoryQty = p.inventory && typeof p.inventory === "object" && "quantity" in p.inventory
+				? p.inventory.quantity
+				: 0;
+
+			const images = Array.isArray(p.images)
+				? p.images.map((img: string) => img.startsWith("http") ? img : `${baseUrl}${img.startsWith("/") ? "" : "/"}${img}`)
+				: [];
+
+			return {
+				...p,
+				stock: inventoryQty,
+				images,
+				sellingPrice: p.sellingPrice ?? p.price,
+				basePrice: p.basePrice ?? p.discountPrice,
+			};
+		});
+
 		return {
-			products,
+			products: normalizedProducts,
 			pagination: {
 				page,
 				limit,
@@ -681,12 +694,30 @@ export class AdminService {
 				);
 				await prisma.product.update({
 					where: { id: productId },
-					data: { isActive: false },
+					data: { isActive: false, status: "INACTIVE" },
 				});
 			} else {
 				throw error;
 			}
 		}
+	}
+
+	async duplicateProduct(productId: string): Promise<any> {
+		const { ProductService } = await import("../products/product.service");
+		const productService = new ProductService();
+		return productService.duplicateProduct(productId);
+	}
+
+	async archiveProduct(productId: string): Promise<any> {
+		const { ProductService } = await import("../products/product.service");
+		const productService = new ProductService();
+		return productService.archiveProduct(productId);
+	}
+
+	async updateStock(productId: string, stock: number): Promise<any> {
+		const { ProductService } = await import("../products/product.service");
+		const productService = new ProductService();
+		return productService.updateStock(productId, stock);
 	}
 
 	async createProduct(data: any): Promise<any> {

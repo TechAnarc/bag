@@ -74,6 +74,18 @@ router.put(
 // Product Management
 router.get("/products", adminController.getProducts.bind(adminController));
 router.post("/products", adminController.createProduct.bind(adminController));
+router.post(
+	"/products/:productId/duplicate",
+	adminController.duplicateProduct.bind(adminController),
+);
+router.patch(
+	"/products/:productId/archive",
+	adminController.archiveProduct.bind(adminController),
+);
+router.patch(
+	"/products/:productId/stock",
+	adminController.updateStock.bind(adminController),
+);
 router.put(
 	"/products/:productId",
 	adminController.updateProduct.bind(adminController),

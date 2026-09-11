@@ -60,7 +60,7 @@ export function SmartTaglineField({ productName, categoryId, value, onChange, th
           value={value} 
           onChange={(e) => onChange(e.target.value)} 
           className={cn(inputBg, "pr-10")} 
-          placeholder="e.g. Elegant gold plated necklace for special occasions"
+          placeholder="e.g. Handcrafted luxury tote bag designed for daily elegance"
         />
         {value && (
           <div className="absolute right-3 top-1/2 -translate-y-1/2">

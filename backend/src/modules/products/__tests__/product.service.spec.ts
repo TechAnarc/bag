@@ -17,20 +17,31 @@ describe("ProductService", () => {
 	describe("getAllProducts", () => {
 		it("should call findAll with category filter if provided", async () => {
 			productRepository.findAll.mockResolvedValue([]);
+			productRepository.count.mockResolvedValue(0);
 
-			await productService.getAllProducts("Necklace");
+			await productService.getAllProducts("Tote Bags");
 
-			expect(productRepository.findAll).toHaveBeenCalledWith({
-				category: "Necklace",
-			});
+			expect(productRepository.findAll).toHaveBeenCalledWith(
+				expect.objectContaining({
+					where: expect.objectContaining({
+						category: { is: { slug: "Tote Bags" } },
+					}),
+				}),
+			);
 		});
 
 		it("should call findAll without filter if no category provided", async () => {
 			productRepository.findAll.mockResolvedValue([]);
+			productRepository.count.mockResolvedValue(0);
 
 			await productService.getAllProducts();
 
-			expect(productRepository.findAll).toHaveBeenCalledWith({});
+			expect(productRepository.findAll).toHaveBeenCalledWith(
+				expect.objectContaining({
+					take: 20,
+					skip: 0,
+				}),
+			);
 		});
 	});
 

@@ -109,12 +109,9 @@ export class AuthService {
 		});
 
 		// 4. Mark email and phone as verified
-		await (prisma.user as any).update({
-			where: { id: user.id },
-			data: {
-				isEmailVerified: true,
-				isPhoneVerified: true,
-			},
+		await this.repository.updateUser(user.id, {
+			isEmailVerified: true,
+			isPhoneVerified: true,
 		});
 
 		// 5. Issue Auth Session immediately

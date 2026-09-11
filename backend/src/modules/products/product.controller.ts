@@ -13,6 +13,7 @@ import { ImageUploadService } from "../../services/image-upload.service";
 import { SkuGeneratorService } from "../../services/sku-generator.service";
 import { TaglineGeneratorService } from "../../services/tagline-generator.service";
 import { DescriptionGeneratorService } from "../../services/description-generator.service";
+import { memoryCache } from "../../utils/cache";
 
 export class ProductController {
 	private productService: ProductService;
@@ -48,6 +49,22 @@ export class ProductController {
 					).toString();
 					return res.redirect(301, `/api/v1/products?${queryString}`);
 				}
+			}
+
+			if (!isAdmin && !req.query.search) {
+				const cacheKey = `products:${req.query.category || "all"}:${req.query.gender || "all"}:${req.query.limit || 20}:${req.query.offset || 0}`;
+				const cached = memoryCache.get(cacheKey);
+				if (cached) {
+					res.setHeader("X-Cache", "HIT");
+					return sendSuccess(res, "Products retrieved successfully", cached);
+				}
+				const result = await this.productService.getAllProducts({
+					...req.query,
+					isAdmin,
+				});
+				memoryCache.set(cacheKey, result, 30);
+				res.setHeader("X-Cache", "MISS");
+				return sendSuccess(res, "Products retrieved successfully", result);
 			}
 
 			const result = await this.productService.getAllProducts({
@@ -147,6 +164,7 @@ export class ProductController {
 			}
 
 			const product = await this.productService.createProduct(validation.data);
+			memoryCache.invalidatePrefix("products:");
 			return sendSuccess(res, "Product created successfully", product, 201);
 		} catch (error: any) {
 			logger.error(`Create product error: ${error.message}`);
@@ -174,6 +192,7 @@ export class ProductController {
 				id as string,
 				validation.data,
 			);
+			memoryCache.invalidatePrefix("products:");
 			return sendSuccess(res, "Product updated successfully", product);
 		} catch (error: any) {
 			logger.error(`Update product error: ${error.message}`);
@@ -185,9 +204,50 @@ export class ProductController {
 		try {
 			const { id } = req.params;
 			await this.productService.deleteProduct(id as string);
+			memoryCache.invalidatePrefix("products:");
 			return sendSuccess(res, "Product deleted successfully", null);
 		} catch (error: any) {
 			logger.error(`Delete product error: ${error.message}`);
+			return sendError(res, error.message, 400);
+		}
+	};
+
+	duplicate = async (req: AuthRequest, res: Response) => {
+		try {
+			const { id } = req.params;
+			const product = await this.productService.duplicateProduct(id as string);
+			memoryCache.invalidatePrefix("products:");
+			return sendSuccess(res, "Product duplicated successfully", product, 201);
+		} catch (error: any) {
+			logger.error(`Duplicate product error: ${error.message}`);
+			return sendError(res, error.message, 400);
+		}
+	};
+
+	archive = async (req: AuthRequest, res: Response) => {
+		try {
+			const { id } = req.params;
+			const product = await this.productService.archiveProduct(id as string);
+			memoryCache.invalidatePrefix("products:");
+			return sendSuccess(res, `Product status updated to ${product.status}`, product);
+		} catch (error: any) {
+			logger.error(`Archive product error: ${error.message}`);
+			return sendError(res, error.message, 400);
+		}
+	};
+
+	updateStock = async (req: AuthRequest, res: Response) => {
+		try {
+			const { id } = req.params;
+			const { stock } = req.body;
+			if (typeof stock !== "number" || stock < 0) {
+				return sendError(res, "Valid non-negative stock quantity required", 400);
+			}
+			const product = await this.productService.updateStock(id as string, stock);
+			memoryCache.invalidatePrefix("products:");
+			return sendSuccess(res, "Stock updated successfully", product);
+		} catch (error: any) {
+			logger.error(`Update stock error: ${error.message}`);
 			return sendError(res, error.message, 400);
 		}
 	};

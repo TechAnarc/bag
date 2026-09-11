@@ -11,7 +11,8 @@ export class ProductService {
 		this.repository = new ProductRepository();
 	}
 
-	async getAllProducts(query: any) {
+	async getAllProducts(query: any = {}) {
+		const opts = typeof query === "string" ? { category: query } : (query || {});
 		const {
 			category,
 			search,
@@ -20,7 +21,7 @@ export class ProductService {
 			limit = 20,
 			offset = 0,
 			isAdmin = false,
-		} = query;
+		} = opts;
 		const where: Prisma.ProductWhereInput = {};
 
 		// Public only sees active, and even for admins we default to active on the public shop
@@ -215,6 +216,72 @@ export class ProductService {
 
 	async deleteProduct(id: string) {
 		return this.repository.delete(id);
+	}
+
+	async duplicateProduct(id: string) {
+		const original = await this.repository.findById(id);
+		if (!original) {
+			throw new Error("Original product not found");
+		}
+
+		const copyName = `${original.name} (Copy)`;
+		const copySlug = `${original.slug}-copy-${Math.random().toString(36).substring(2, 6)}`;
+		
+		const { SkuGeneratorService } = await import("../../services/sku-generator.service");
+		let copySku = original.sku ? `${original.sku}-COPY-${Math.floor(100 + Math.random() * 900)}` : "";
+		if (!copySku && original.categoryId) {
+			copySku = await SkuGeneratorService.generateSku(original.categoryId);
+		}
+
+		const duplicateData: any = {
+			name: copyName,
+			slug: copySlug,
+			sku: copySku,
+			price: original.price,
+			basePrice: original.basePrice,
+			sellingPrice: original.sellingPrice,
+			ownerPrice: original.ownerPrice,
+			categoryId: original.categoryId,
+			description: original.description,
+			shortTagline: original.shortTagline,
+			images: original.images || [],
+			thumbnail: original.thumbnail,
+			specifications: original.specifications || {},
+			careInstructions: original.careInstructions,
+			badges: original.badges || [],
+			tags: original.tags || [],
+			inventory: original.inventory || { quantity: 0 },
+			status: "ACTIVE" as ProductStatus,
+			isActive: true,
+		};
+
+		return this.repository.create(duplicateData);
+	}
+
+	async archiveProduct(id: string) {
+		const product = await this.repository.findById(id);
+		if (!product) throw new Error("Product not found");
+
+		const newStatus = product.status === "INACTIVE" ? "ACTIVE" : "INACTIVE";
+		const newActive = newStatus === "ACTIVE";
+
+		return this.repository.update(id, {
+			status: newStatus as ProductStatus,
+			isActive: newActive,
+		});
+	}
+
+	async updateStock(id: string, stock: number) {
+		const product = await this.repository.findById(id);
+		if (!product) throw new Error("Product not found");
+
+		const inventoryData: any = typeof product.inventory === "object" && product.inventory !== null
+			? { ...product.inventory, quantity: stock }
+			: { quantity: stock };
+
+		return this.repository.update(id, {
+			inventory: inventoryData,
+		});
 	}
 
 	async searchProducts(q: string) {

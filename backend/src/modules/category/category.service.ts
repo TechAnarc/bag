@@ -124,4 +124,20 @@ export class CategoryService {
 
 		return this.repository.delete(id);
 	}
+
+	async reorderCategories(items: { id: string; sortOrder: number }[]) {
+		if (!Array.isArray(items) || items.length === 0) {
+			throw new Error("Invalid reorder items array");
+		}
+		await this.repository.reorder(items);
+		return { success: true };
+	}
+
+	async toggleCategoryActive(id: string) {
+		const category = await this.repository.findById(id);
+		if (!category) {
+			throw new Error("Category not found");
+		}
+		return this.repository.update(id, { isActive: !category.isActive });
+	}
 }

@@ -4,6 +4,8 @@ import { sendSuccess, sendError } from "../../utils/response";
 import { logger } from "../../config/logger";
 import { AuthRequest } from "../../middleware/auth.middleware";
 
+import { memoryCache } from "../../utils/cache";
+
 export class CategoryController {
 	private categoryService: CategoryService;
 
@@ -13,22 +15,26 @@ export class CategoryController {
 
 	getAll = async (req: AuthRequest, res: Response) => {
 		try {
-			logger.info(
-				`[Categories] GET request - Query: ${JSON.stringify(req.query)}`,
-			);
 			const { gender } = req.query;
 			const isAdmin =
 				req.auth?.role === "ADMIN" ||
 				req.auth?.role === "SUPER_ADMIN" ||
 				!!(req as any).admin;
 
+			const cacheKey = `categories:${gender || "all"}:${isAdmin ? "admin" : "public"}`;
+			const cached = memoryCache.get(cacheKey);
+			if (cached) {
+				res.setHeader("X-Cache", "HIT");
+				return sendSuccess(res, "Categories retrieved successfully", cached);
+			}
+
 			const categories = await this.categoryService.getAllCategories(
 				isAdmin,
 				gender as string,
 			);
-			logger.info(
-				`[Categories] Successfully retrieved ${categories.length} categories`,
-			);
+
+			memoryCache.set(cacheKey, categories, 120);
+			res.setHeader("X-Cache", "MISS");
 
 			return sendSuccess(res, "Categories retrieved successfully", categories);
 		} catch (error: any) {
@@ -68,6 +74,8 @@ export class CategoryController {
 
 			const category = await this.categoryService.createCategory(req.body);
 			logger.info(`[Categories] Successfully created category: ${category.id}`);
+			memoryCache.invalidatePrefix("categories:");
+			memoryCache.invalidatePrefix("products:");
 
 			return sendSuccess(res, "Category created successfully", category, 201);
 		} catch (error: any) {
@@ -86,6 +94,8 @@ export class CategoryController {
 				id as string,
 				req.body,
 			);
+			memoryCache.invalidatePrefix("categories:");
+			memoryCache.invalidatePrefix("products:");
 			return sendSuccess(res, "Category updated successfully", category);
 		} catch (error: any) {
 			logger.error(`Update category error: ${error.message}`);
@@ -97,9 +107,37 @@ export class CategoryController {
 		try {
 			const { id } = req.params;
 			await this.categoryService.deleteCategory(id as string);
+			memoryCache.invalidatePrefix("categories:");
+			memoryCache.invalidatePrefix("products:");
 			return sendSuccess(res, "Category deleted successfully", null);
 		} catch (error: any) {
 			logger.error(`Delete category error: ${error.message}`);
+			return sendError(res, error.message, 400);
+		}
+	};
+
+	reorder = async (req: AuthRequest, res: Response) => {
+		try {
+			const { items } = req.body;
+			await this.categoryService.reorderCategories(items);
+			memoryCache.invalidatePrefix("categories:");
+			memoryCache.invalidatePrefix("products:");
+			return sendSuccess(res, "Categories reordered successfully", null);
+		} catch (error: any) {
+			logger.error(`Reorder categories error: ${error.message}`);
+			return sendError(res, error.message, 400);
+		}
+	};
+
+	toggleActive = async (req: AuthRequest, res: Response) => {
+		try {
+			const { id } = req.params;
+			const category = await this.categoryService.toggleCategoryActive(id as string);
+			memoryCache.invalidatePrefix("categories:");
+			memoryCache.invalidatePrefix("products:");
+			return sendSuccess(res, `Category ${category.isActive ? 'activated' : 'deactivated'} successfully`, category);
+		} catch (error: any) {
+			logger.error(`Toggle category active error: ${error.message}`);
 			return sendError(res, error.message, 400);
 		}
 	};

@@ -208,6 +208,11 @@ model Product {
   @@index([sku])
   @@index([name])
   @@index([tenantId])
+  @@index([categoryId, isActive, status])
+  @@index([isFeatured, isActive])
+  @@index([isTrending, isActive])
+  @@index([price])
+  @@index([createdAt])
 }
 
 model Review {
@@ -260,6 +265,7 @@ model Category {
   @@index([slug])
   @@index([isActive])
   @@index([tenantId])
+  @@index([isActive, sortOrder])
 }
 
 /// Authoritative server-side coupon model. PostgreSQL is the single source of truth.

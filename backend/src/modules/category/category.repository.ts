@@ -4,11 +4,27 @@ import { PrismaClient, Category, Prisma } from "@prisma/client";
 
 
 export class CategoryRepository {
-	async findAll(where: Prisma.CategoryWhereInput = {}): Promise<Category[]> {
-		return prisma.category.findMany({
+	async findAll(where: Prisma.CategoryWhereInput = {}): Promise<any[]> {
+		return (prisma.category as any).findMany({
 			where,
-			orderBy: { sortOrder: "asc" },
+			include: {
+				_count: {
+					select: { products: true },
+				},
+			},
+			orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
 		});
+	}
+
+	async reorder(items: { id: string; sortOrder: number }[]): Promise<void> {
+		await prisma.$transaction(
+			items.map((item) =>
+				prisma.category.update({
+					where: { id: item.id },
+					data: { sortOrder: item.sortOrder },
+				}),
+			),
+		);
 	}
 
 	async findById(id: string): Promise<Category | null> {

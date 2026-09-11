@@ -369,19 +369,44 @@ export const adminApi = {
         return response.data;
     },
 
+    async duplicateProduct(productId: string) {
+        const response = await api.post(`/admin/products/${productId}/duplicate`);
+        return response.data;
+    },
+
+    async archiveProduct(productId: string) {
+        const response = await api.patch(`/admin/products/${productId}/archive`);
+        return response.data;
+    },
+
+    async updateProductStock(productId: string, stock: number) {
+        const response = await api.patch(`/admin/products/${productId}/stock`, { stock });
+        return response.data;
+    },
+
     // Category CRUD
     async getCategories() {
         const response = await api.get('/categories');
         return response.data;
     },
 
-    async createCategory(data: { name: string; isActive?: boolean }) {
+    async createCategory(data: { name: string; description?: string; image?: string; icon?: string; gender?: string; sortOrder?: number; skuPrefix?: string; isActive?: boolean }) {
         const response = await api.post('/categories', data);
         return response.data;
     },
 
-    async updateCategory(id: string, data: { name?: string; isActive?: boolean }) {
+    async updateCategory(id: string, data: { name?: string; description?: string; image?: string; icon?: string; gender?: string; sortOrder?: number; skuPrefix?: string; isActive?: boolean }) {
         const response = await api.put(`/categories/${id}`, data);
+        return response.data;
+    },
+
+    async toggleCategoryActive(id: string) {
+        const response = await api.patch(`/categories/${id}/toggle`);
+        return response.data;
+    },
+
+    async reorderCategories(items: { id: string; sortOrder: number }[]) {
+        const response = await api.put('/categories/reorder', { items });
         return response.data;
     },
 

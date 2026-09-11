@@ -80,7 +80,7 @@ function PDP() {
             <span className="absolute left-3 top-3 rounded-full bg-gradient-gold px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-ink">Luxury</span>
           </div>
           <div className="mt-3 grid grid-cols-4 gap-3">
-            {product.images.map((src, i) => (
+            {product.images.map((src: string, i: number) => (
               <button key={i} onClick={() => setActiveImg(i)} className={`aspect-square overflow-hidden rounded-lg border-2 ${activeImg === i ? "border-gold" : "border-transparent"}`}>
                 <img src={src} alt="" className="size-full object-cover" />
               </button>

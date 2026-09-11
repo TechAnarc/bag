@@ -1132,6 +1132,80 @@ export class AdminController {
 		}
 	}
 
+	async duplicateProduct(req: Request, res: Response): Promise<void> {
+		try {
+			if (!req.auth) {
+				res.status(401).json({ success: false, message: "Unauthorized" });
+				return;
+			}
+			const { productId } = req.params;
+			const product = await adminService.duplicateProduct(productId as string);
+			await adminService.logAction(req.auth.id, {
+				action: "PRODUCT_DUPLICATE",
+				details: { productId, newProductId: product.id },
+			});
+			res.status(201).json({
+				success: true,
+				message: "Product duplicated successfully",
+				data: product,
+			});
+		} catch (error: any) {
+			console.error("Duplicate product error:", error);
+			res.status(500).json({ success: false, message: error.message || "Failed to duplicate product" });
+		}
+	}
+
+	async archiveProduct(req: Request, res: Response): Promise<void> {
+		try {
+			if (!req.auth) {
+				res.status(401).json({ success: false, message: "Unauthorized" });
+				return;
+			}
+			const { productId } = req.params;
+			const product = await adminService.archiveProduct(productId as string);
+			await adminService.logAction(req.auth.id, {
+				action: "PRODUCT_ARCHIVE",
+				details: { productId, newStatus: product.status },
+			});
+			res.status(200).json({
+				success: true,
+				message: `Product status updated to ${product.status}`,
+				data: product,
+			});
+		} catch (error: any) {
+			console.error("Archive product error:", error);
+			res.status(500).json({ success: false, message: error.message || "Failed to archive product" });
+		}
+	}
+
+	async updateStock(req: Request, res: Response): Promise<void> {
+		try {
+			if (!req.auth) {
+				res.status(401).json({ success: false, message: "Unauthorized" });
+				return;
+			}
+			const { productId } = req.params;
+			const { stock } = req.body;
+			if (typeof stock !== "number" || stock < 0) {
+				res.status(400).json({ success: false, message: "Valid non-negative stock quantity required" });
+				return;
+			}
+			const product = await adminService.updateStock(productId as string, stock);
+			await adminService.logAction(req.auth.id, {
+				action: "PRODUCT_STOCK_UPDATE",
+				details: { productId, stock },
+			});
+			res.status(200).json({
+				success: true,
+				message: "Stock updated successfully",
+				data: product,
+			});
+		} catch (error: any) {
+			console.error("Update stock error:", error);
+			res.status(500).json({ success: false, message: error.message || "Failed to update stock" });
+		}
+	}
+
 	// ==================== Activity Logs ====================
 
 	async getActivityLogs(req: Request, res: Response): Promise<void> {

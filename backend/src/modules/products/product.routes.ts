@@ -36,6 +36,9 @@ router.get("/:id/related", productController.getRelated);
 
 // Admin-only routes (using Admin table authentication)
 router.post("/", authenticateAdmin, productController.create);
+router.post("/:id/duplicate", authenticateAdmin, productController.duplicate);
+router.patch("/:id/archive", authenticateAdmin, productController.archive);
+router.patch("/:id/stock", authenticateAdmin, productController.updateStock);
 router.put("/:id", authenticateAdmin, productController.update);
 router.delete("/:id", authenticateAdmin, productController.delete);
 

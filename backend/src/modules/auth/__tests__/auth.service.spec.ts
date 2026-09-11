@@ -25,22 +25,32 @@ describe("AuthService", () => {
 					email: "test@example.com",
 					password: "password123",
 					name: "Test User",
+					phone: "9876543210",
+					verificationMethod: "EMAIL",
 				}),
-			).rejects.toThrow("User already exists");
+			).rejects.toThrow("Email already registered");
 		});
 
 		it("should hash password and create user", async () => {
 			authRepository.findByEmail.mockResolvedValue(null);
+			authRepository.findByPhone.mockResolvedValue(null);
 			authRepository.createUser.mockResolvedValue({
 				id: "1",
 				email: "test@example.com",
 				role: "USER",
+			});
+			authRepository.updateUser.mockResolvedValue({
+				id: "1",
+				isEmailVerified: true,
+				isPhoneVerified: true,
 			});
 
 			const result = await authService.register({
 				email: "test@example.com",
 				password: "password123",
 				name: "Test User",
+				phone: "9876543210",
+				verificationMethod: "EMAIL",
 			});
 
 			expect(authRepository.createUser).toHaveBeenCalled();
@@ -55,7 +65,7 @@ describe("AuthService", () => {
 
 			await expect(
 				authService.login("test@example.com", "password123"),
-			).rejects.toThrow("Invalid credentials");
+			).rejects.toThrow("USER_NOT_FOUND");
 		});
 
 		it("should throw if password does not match", async () => {

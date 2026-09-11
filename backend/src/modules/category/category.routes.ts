@@ -14,6 +14,8 @@ router.get("/:id", categoryController.getById);
 import { authenticateAdmin } from "../../middleware/adminAuth.middleware";
 
 router.post("/", authenticateAdmin, categoryController.create);
+router.put("/reorder", authenticateAdmin, categoryController.reorder);
+router.patch("/:id/toggle", authenticateAdmin, categoryController.toggleActive);
 router.put("/:id", authenticateAdmin, categoryController.update);
 router.delete("/:id", authenticateAdmin, categoryController.delete);
 

@@ -145,26 +145,30 @@ export function AdminShell({ children }: { children: ReactNode }) {
   );
 }
 
-export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: ReactNode }) {
+export function PageHeader({ title, subtitle, description, actions, action }: { title: string; subtitle?: string; description?: string; actions?: ReactNode; action?: ReactNode }) {
+  const subText = subtitle || description;
+  const actionBtns = actions || action;
   return (
     <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
       <div>
         <h1 className="font-serif text-3xl tracking-tight md:text-4xl">{title}</h1>
-        {subtitle && <p className="mt-1 text-sm text-black/60 dark:text-cream/60">{subtitle}</p>}
+        {subText && <p className="mt-1 text-sm text-black/60 dark:text-cream/60">{subText}</p>}
       </div>
-      {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+      {actionBtns && <div className="flex flex-wrap gap-2">{actionBtns}</div>}
     </div>
   );
 }
 
-export function EmptyState({ title, hint }: { title: string; hint?: string }) {
+export function EmptyState({ title, hint, description, action }: { title: string; hint?: string; description?: string; action?: ReactNode }) {
+  const hintText = hint || description;
   return (
     <div className="rounded-2xl border border-dashed border-black/15 bg-white/40 p-16 text-center backdrop-blur dark:border-white/10 dark:bg-white/[0.02]">
       <div className="mx-auto grid size-14 place-items-center rounded-full bg-gradient-to-br from-gold/30 to-transparent">
         <Package className="size-6 text-gold" />
       </div>
       <p className="mt-4 font-serif text-xl">{title}</p>
-      {hint && <p className="mt-1 text-sm text-black/50 dark:text-cream/50">{hint}</p>}
+      {hintText && <p className="mt-1 text-sm text-black/50 dark:text-cream/50">{hintText}</p>}
+      {action && <div className="mt-4 flex justify-center">{action}</div>}
     </div>
   );
 }
