@@ -340,7 +340,7 @@ async function bulletproofSetup() {
 
 		const adminEmail =
 			process.env.ADMIN_EMAIL || "mahakal.mahakali014@gmail.com";
-		const adminPassword = process.env.ADMIN_PASSWORD || "Kali@0786";
+		const adminPassword = process.env.ADMIN_PASSWORD || "Mahakal@Mahakali";
 		const adminName = process.env.ADMIN_NAME || "Super Admin";
 		const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || "12");
 
