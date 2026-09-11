@@ -1,4 +1,9 @@
+import dns from "dns";
 import express from "express";
+
+if (dns.setDefaultResultOrder) {
+	dns.setDefaultResultOrder("ipv4first");
+}
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";

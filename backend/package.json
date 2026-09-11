@@ -5,7 +5,7 @@
 	"main": "src/index.ts",
 	"scripts": {
 		"build": "npx prisma generate && node scripts/esbuild-compile.js",
-		"start": "node scripts/bulletproof-setup.js && node dist/index.js",
+		"start": "node --dns-result-order=ipv4first scripts/bulletproof-setup.js && node --dns-result-order=ipv4first dist/index.js",
 		"dev": "node scripts/dev-clean.js",
 		"dev:unsafe": "tsx watch src/index.ts",
 		"db:clean": "node -e \"const fs=require('fs'); const p='./node_modules/.prisma/client'; if(fs.existsSync(p)) fs.rmSync(p, {recursive: true, force: true})\"",

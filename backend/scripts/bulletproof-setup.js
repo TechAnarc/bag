@@ -20,6 +20,12 @@ const { Client } = require("pg");
 const fs = require("fs");
 const path = require("path");
 const bcrypt = require("bcryptjs");
+const dns = require("dns");
+
+// Force IPv4 resolution first (Render containers do not support IPv6 outbound routing)
+if (dns.setDefaultResultOrder) {
+	dns.setDefaultResultOrder("ipv4first");
+}
 
 // ============================
 // LOGGING
