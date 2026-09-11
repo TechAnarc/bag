@@ -1,3 +1,4 @@
+import { prisma } from '../../config/database';
 import {
 	PrismaClient,
 	DeliveryAgent,
@@ -5,7 +6,7 @@ import {
 	OrderStatus,
 } from "@prisma/client";
 
-const prisma = new PrismaClient();
+
 
 export class DeliveryAgentRepository {
 	async findById(id: string): Promise<DeliveryAgent | null> {

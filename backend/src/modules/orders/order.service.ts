@@ -1,3 +1,4 @@
+import { prisma } from '../../config/database';
 import { OrderRepository, CreateOrderData } from "./order.repository";
 import { PaymentService } from "../payments/payment.service";
 import { CartService } from "../cart/cart.service";
@@ -77,27 +78,8 @@ export class OrderService {
 		// 2. Server-Side Coupon Authority Validation
 		if (couponCode && typeof couponCode === "string" && couponCode.trim().length > 0) {
 			const cleanCode = couponCode.trim().toUpperCase();
-			const configRecord = await (prisma as any).businessConfig.findFirst({
-				where: { key: "general_settings" },
-			});
-			const coupons: any[] = configRecord?.metadata?.coupons || [];
-			const matchedCoupon = coupons.find(
-				(c) => c.code?.toUpperCase() === cleanCode && c.isActive !== false,
-			);
-
-			if (matchedCoupon) {
-				appliedCouponCode = matchedCoupon.code;
-				if (matchedCoupon.type === "PERCENTAGE") {
-					// Calculated on base cart subtotal
-					const percent = Number(matchedCoupon.value) || 0;
-					couponDiscount = Math.round((cartSubtotal * percent) / 100);
-					if (matchedCoupon.maxDiscount && couponDiscount > matchedCoupon.maxDiscount) {
-						couponDiscount = matchedCoupon.maxDiscount;
-					}
-				} else if (matchedCoupon.type === "FIXED_AMOUNT") {
-					couponDiscount = Number(matchedCoupon.value) || 0;
-				}
-			}
+			// TODO: Add proper coupon model. Skipping lookup as BusinessConfig does not support it.
+			console.warn("[OrderService] Coupon feature is currently disabled pending schema update.");
 		}
 
 		let cartItems: any[] = [];
@@ -118,26 +100,6 @@ export class OrderService {
 					quantity: item.quantity,
 				};
 			});
-
-			// Calculate item_total for coupon percentage if applicable
-			const baseItemTotal = pricingItems.reduce((acc, p) => acc + p.price * p.quantity, 0);
-			if (appliedCouponCode && couponDiscount === 0) {
-				const configRecord = await (prisma as any).businessConfig.findFirst({
-					where: { key: "general_settings" },
-				});
-				const coupons: any[] = configRecord?.metadata?.coupons || [];
-				const matchedCoupon = coupons.find((c) => c.code?.toUpperCase() === appliedCouponCode);
-				if (matchedCoupon && (!matchedCoupon.minPurchase || baseItemTotal >= matchedCoupon.minPurchase)) {
-					if (matchedCoupon.type === "PERCENTAGE") {
-						couponDiscount = Math.round((baseItemTotal * (Number(matchedCoupon.value) || 0)) / 100);
-						if (matchedCoupon.maxDiscount && couponDiscount > matchedCoupon.maxDiscount) {
-							couponDiscount = matchedCoupon.maxDiscount;
-						}
-					} else if (matchedCoupon.type === "FIXED") {
-						couponDiscount = Number(matchedCoupon.value) || 0;
-					}
-				}
-			}
 
 			const totals = calculateOrderTotals(pricingItems, deliveryMethod, couponDiscount);
 			cartItems = directItems.map((item) => {
@@ -173,23 +135,6 @@ export class OrderService {
 			}));
 
 			const baseItemTotal = pricingItems.reduce((acc, p) => acc + p.price * p.quantity, 0);
-			if (appliedCouponCode && couponDiscount === 0) {
-				const configRecord = await (prisma as any).businessConfig.findFirst({
-					where: { key: "general_settings" },
-				});
-				const coupons: any[] = configRecord?.metadata?.coupons || [];
-				const matchedCoupon = coupons.find((c) => c.code?.toUpperCase() === appliedCouponCode);
-				if (matchedCoupon && (!matchedCoupon.minPurchase || baseItemTotal >= matchedCoupon.minPurchase)) {
-					if (matchedCoupon.type === "PERCENTAGE") {
-						couponDiscount = Math.round((baseItemTotal * (Number(matchedCoupon.value) || 0)) / 100);
-						if (matchedCoupon.maxDiscount && couponDiscount > matchedCoupon.maxDiscount) {
-							couponDiscount = matchedCoupon.maxDiscount;
-						}
-					} else if (matchedCoupon.type === "FIXED") {
-						couponDiscount = Number(matchedCoupon.value) || 0;
-					}
-				}
-			}
 
 			const totals = calculateOrderTotals(pricingItems, deliveryMethod, couponDiscount);
 

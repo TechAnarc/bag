@@ -36,14 +36,14 @@ export class WebhookStore {
 	): Promise<StoredWebhookEvent | null> {
 		try {
 			// Attempt idempotent insert using upsert with no-op on conflict
-			const record = await (prisma as any).webhookEvent.upsert({
+			const record = await prisma.webhookEvent.upsert({
 				where: { eventId },
 				update: {}, // no-op on duplicate
 				create: {
 					id: uuidv4(),
 					eventId,
 					eventType,
-					rawPayload,
+					rawPayload: rawPayload as any,
 					status: "RECEIVED",
 					correlationId,
 					idempotencyKey: `${eventType}:${eventId}`,
@@ -58,7 +58,7 @@ export class WebhookStore {
 			});
 
 			// 2. Fetch full record with timestamps to detect duplicate
-			const existing = await (prisma as any).webhookEvent.findUnique({
+			const existing = await prisma.webhookEvent.findUnique({
 				where: { eventId },
 				select: {
 					id: true,
@@ -89,7 +89,7 @@ export class WebhookStore {
 				return null;
 			}
 
-			return existing;
+			return existing as unknown as StoredWebhookEvent;
 		} catch (error: any) {
 			logger.error(
 				`[WebhookStore] Failed to store webhook event ${eventId}: ${error.message}`,
@@ -99,7 +99,7 @@ export class WebhookStore {
 	}
 
 	async markProcessing(id: string): Promise<void> {
-		await (prisma as any).webhookEvent
+		await prisma.webhookEvent
 			.update({
 				where: { id },
 				data: { status: "PROCESSING" },
@@ -113,13 +113,13 @@ export class WebhookStore {
 		id: string,
 		log?: Record<string, unknown>,
 	): Promise<void> {
-		await (prisma as any).webhookEvent
+		await prisma.webhookEvent
 			.update({
 				where: { id },
 				data: {
 					status: "PROCESSED",
 					processedAt: new Date(),
-					processingLog: log ?? null,
+					processingLog: (log ?? null) as any,
 				},
 			})
 			.catch((e: any) =>
@@ -128,7 +128,7 @@ export class WebhookStore {
 	}
 
 	async markFailed(id: string, error: string, dead = false): Promise<void> {
-		await (prisma as any).webhookEvent
+		await prisma.webhookEvent
 			.update({
 				where: { id },
 				data: {
@@ -145,7 +145,7 @@ export class WebhookStore {
 
 	/** Returns events that failed and are eligible for retry (retryCount < 3). */
 	async getPendingRetries(limit = 20): Promise<StoredWebhookEvent[]> {
-		return (prisma as any).webhookEvent.findMany({
+		const results = await prisma.webhookEvent.findMany({
 			where: {
 				status: "FAILED",
 				retryCount: { lt: 3 },
@@ -160,6 +160,7 @@ export class WebhookStore {
 				retryCount: true,
 			},
 		});
+        return results as unknown as StoredWebhookEvent[];
 	}
 }
 

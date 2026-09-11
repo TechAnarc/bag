@@ -1,8 +1,9 @@
+import { prisma } from '../../config/database';
 import { PrismaClient, ReviewStatus } from "@prisma/client";
 import type { CreateReviewDto, UpdateReviewStatusDto } from "./review.types";
 import { eventBus, DomainEvent } from "../../core/events/event-bus";
 
-const prisma = new PrismaClient();
+
 
 export class ReviewService {
 	async create(data: CreateReviewDto, userId?: string) {

@@ -19,7 +19,7 @@ export class LogisticsService {
 		weight: number,
 	): Promise<DeliveryEstimate[]> {
 		// 1. Fetch active partners
-		const partners = await (prisma as any).logisticsPartner.findMany({
+		const partners = await prisma.logisticsPartner.findMany({
 			where: { isActive: true },
 		});
 
@@ -57,7 +57,7 @@ export class LogisticsService {
 		const order = await prisma.order.findUnique({ where: { id: orderId } });
 		if (!order) throw new Error("Order not found");
 
-		const partner = await (prisma as any).logisticsPartner.findUnique({
+		const partner = await prisma.logisticsPartner.findUnique({
 			where: { id: partnerId },
 		});
 		if (!partner) throw new Error("Partner not found");
@@ -67,7 +67,7 @@ export class LogisticsService {
 		const waybill = `WB-${Math.floor(Math.random() * 10000000)}`;
 
 		// Create Shipment Record
-		const shipment = await (prisma as any).shipment.create({
+		const shipment = await prisma.shipment.create({
 			data: {
 				orderId,
 				partnerId,
@@ -89,13 +89,13 @@ export class LogisticsService {
 		status: string,
 		location?: string,
 	) {
-		const shipment = await (prisma as any).shipment.findUnique({
+		const shipment = await prisma.shipment.findUnique({
 			where: { trackingNumber },
 		});
 
 		if (!shipment) throw new Error("Shipment not found");
 
-		const updated = await (prisma as any).shipment.update({
+		const updated = await prisma.shipment.update({
 			where: { id: shipment.id },
 			data: {
 				status,

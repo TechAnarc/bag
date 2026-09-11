@@ -1,7 +1,8 @@
+import { prisma } from '../../config/database';
 import { PrismaClient } from "@prisma/client";
 import { slugify } from "../../utils/slugify";
 
-const prisma = new PrismaClient();
+
 
 export class SeoService {
 	private baseUrl = "https://triveni1gram.in";

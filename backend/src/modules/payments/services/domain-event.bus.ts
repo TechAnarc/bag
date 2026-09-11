@@ -55,7 +55,7 @@ class DomainEventBus {
 	async publish(...events: DomainEventPayload[]): Promise<void> {
 		if (!events.length) return;
 		try {
-			await (prisma as any).domainEventOutbox.createMany({
+			await prisma.domainEventOutbox.createMany({
 				data: events.map((e) => ({
 					id: uuidv4(),
 					eventType: e.eventType,
@@ -89,7 +89,7 @@ class DomainEventBus {
 	 */
 	async flushOutbox(limit = 50): Promise<void> {
 		try {
-			const events = await (prisma as any).domainEventOutbox.findMany({
+			const events = await prisma.domainEventOutbox.findMany({
 				where: { published: false, retryCount: { lt: 5 } },
 				orderBy: { createdAt: "asc" },
 				take: limit,
@@ -98,7 +98,7 @@ class DomainEventBus {
 			if (!events.length) return;
 
 			const ids = events.map((e: any) => e.id);
-			await (prisma as any).domainEventOutbox.updateMany({
+			await prisma.domainEventOutbox.updateMany({
 				where: { id: { in: ids } },
 				data: { published: true, publishedAt: new Date() },
 			});

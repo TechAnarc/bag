@@ -24,7 +24,7 @@ export interface AuditEntry {
 export class PaymentAuditService {
 	async log(entry: AuditEntry): Promise<void> {
 		try {
-			await (prisma as any).paymentAuditLog.create({
+			await prisma.paymentAuditLog.create({
 				data: {
 					id: uuidv4(),
 					paymentId: entry.paymentId ?? null,
@@ -54,7 +54,7 @@ export class PaymentAuditService {
 
 	async getHistory(paymentId: string): Promise<any[]> {
 		try {
-			return await (prisma as any).paymentAuditLog.findMany({
+			return await prisma.paymentAuditLog.findMany({
 				where: { paymentId },
 				orderBy: { occurredAt: "asc" },
 			});
@@ -65,7 +65,7 @@ export class PaymentAuditService {
 
 	async getOrderHistory(orderId: string): Promise<any[]> {
 		try {
-			return await (prisma as any).paymentAuditLog.findMany({
+			return await prisma.paymentAuditLog.findMany({
 				where: { orderId },
 				orderBy: { occurredAt: "asc" },
 			});

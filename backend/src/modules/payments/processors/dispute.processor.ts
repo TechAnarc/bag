@@ -15,7 +15,7 @@ async function upsertDispute(
 	entity: RazorpayDisputeEntity,
 	correlationId: string,
 ) {
-	await (prisma as any).disputeRecord.upsert({
+	await prisma.disputeRecord.upsert({
 		where: { razorpayDisputeId: entity.id },
 		update: {
 			status: entity.status,
@@ -87,7 +87,7 @@ export async function handleDisputeWon(
 	logger.info(`[DisputeProcessor] 🏆 payment.dispute.won | id=${entity.id}`, {
 		correlationId,
 	});
-	await (prisma as any).disputeRecord.updateMany({
+	await prisma.disputeRecord.updateMany({
 		where: { razorpayDisputeId: entity.id },
 		data: { status: "won", wonAt: new Date(), updatedAt: new Date() },
 	});
@@ -117,7 +117,7 @@ export async function handleDisputeLost(
 	logger.error(`[DisputeProcessor] 💔 payment.dispute.lost | id=${entity.id}`, {
 		correlationId,
 	});
-	await (prisma as any).disputeRecord.updateMany({
+	await prisma.disputeRecord.updateMany({
 		where: { razorpayDisputeId: entity.id },
 		data: { status: "lost", lostAt: new Date(), updatedAt: new Date() },
 	});
@@ -152,7 +152,7 @@ export async function handleDisputeClosed(
 		`[DisputeProcessor] 🔒 payment.dispute.closed | id=${entity.id}`,
 		{ correlationId },
 	);
-	await (prisma as any).disputeRecord.updateMany({
+	await prisma.disputeRecord.updateMany({
 		where: { razorpayDisputeId: entity.id },
 		data: { status: "closed", updatedAt: new Date() },
 	});

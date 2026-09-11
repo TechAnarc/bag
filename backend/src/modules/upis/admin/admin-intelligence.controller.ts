@@ -57,7 +57,7 @@ export class AdminIntelligenceController {
 			// If stage filter applied, we first get user IDs from intelligence table
 			let filteredUserIds: string[] | undefined;
 			if (stage && stage !== "all") {
-				const matchingIntelligence = await (prisma as any).userIntelligence.findMany({
+				const matchingIntelligence = await prisma.userIntelligence.findMany({
 					where: { lifecycleStage: stage },
 					select: { userId: true },
 				});
@@ -104,7 +104,7 @@ export class AdminIntelligenceController {
 
 			if (userIds.length > 0) {
 				try {
-					const recentEvents = await (prisma as any).behavioralEvent.findMany({
+					const recentEvents = await prisma.behavioralEvent.findMany({
 						where: { userId: { in: userIds } },
 						orderBy: { occurredAt: "desc" },
 						take: 500,
@@ -176,7 +176,7 @@ export class AdminIntelligenceController {
 			const timeLimit = new Date(Date.now() - 24 * 60 * 60 * 1000); // Last 24 Hours
 
 			// 1. Fetch very recent streaming raw events for the "Live Ticker"
-			const recentStreams = await (prisma as any).behavioralEvent.findMany({
+			const recentStreams = await prisma.behavioralEvent.findMany({
 				where: { occurredAt: { gte: new Date(Date.now() - 30 * 60 * 1000) } }, // Last 30 mins
 				orderBy: { occurredAt: "desc" },
 				take: 50,
@@ -184,7 +184,7 @@ export class AdminIntelligenceController {
 
 			// 2. Fetch distinct active sessions aggregated from raw event table
 			// We can use manual grouping logic after finding many for maximum compatibility
-			const activeEvents = await (prisma as any).behavioralEvent.findMany({
+			const activeEvents = await prisma.behavioralEvent.findMany({
 				where: { occurredAt: { gte: timeLimit } },
 				orderBy: { occurredAt: "desc" },
 				take: 500,

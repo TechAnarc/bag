@@ -70,7 +70,7 @@ export class CustomerSupportAgent {
 		});
 
 		// 2. Read ADE decisions for this order
-		const decisions = await (prisma as any).autonomousDecision.findMany({
+		const decisions = await prisma.autonomousDecision.findMany({
 			where: {
 				entityType: "ORDER",
 				entityId: order.id,

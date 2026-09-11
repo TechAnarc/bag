@@ -17,7 +17,7 @@ async function upsertSubscription(
 	entity: RazorpaySubscriptionEntity,
 	correlationId: string,
 ) {
-	await (prisma as any).subscriptionRecord.upsert({
+	await prisma.subscriptionRecord.upsert({
 		where: { razorpaySubscriptionId: entity.id },
 		update: {
 			status: entity.status,
@@ -153,7 +153,7 @@ export async function handleSubscriptionEvent(
 			"subscription.expired",
 		].includes(razorpayEvent)
 	) {
-		await (prisma as any).subscriptionRecord.updateMany({
+		await prisma.subscriptionRecord.updateMany({
 			where: { razorpaySubscriptionId: entity.id },
 			data: { endedAt: new Date() },
 		});

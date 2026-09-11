@@ -24,7 +24,7 @@ export async function bootstrapDigitalTwins() {
 
 			// 1. Auto-Provision Missing Twins
 			if (!twin) {
-				twin = await (prisma as any).userIntelligence.create({
+				twin = await prisma.userIntelligence.create({
 					data: {
 						userId: user.id,
 						lastActiveAt: user.lastLoginAt || user.createdAt,
@@ -54,7 +54,7 @@ export async function bootstrapDigitalTwins() {
 			else if (orderCount > 3) stage = "LOYAL";
 			else if (orderCount > 0) stage = "ACTIVE";
 
-			await (prisma as any).userIntelligence.update({
+			await prisma.userIntelligence.update({
 				where: { userId: user.id },
 				data: {
 					ltv: totalSpent,

@@ -10,7 +10,7 @@ export class LogisticsController {
 	 */
 	async getPartners(req: Request, res: Response) {
 		try {
-			const partners = await (prisma as any).logisticsPartner.findMany({
+			const partners = await prisma.logisticsPartner.findMany({
 				orderBy: { reliabilityScore: "desc" },
 			});
 			return sendSuccess(res, "Logistics partner network retrieved.", partners);
@@ -25,7 +25,7 @@ export class LogisticsController {
 	async getPartnerPerformance(req: Request, res: Response) {
 		try {
 			const { id } = req.params;
-			const partner = await (prisma as any).logisticsPartner.findUnique({
+			const partner = await prisma.logisticsPartner.findUnique({
 				where: { id },
 				include: {
 					shipments: {
@@ -55,7 +55,7 @@ export class LogisticsController {
 			const { name, code, type, capabilities, apiKey, apiSecret, apiUrl } =
 				req.body;
 
-			const partner = await (prisma as any).logisticsPartner.create({
+			const partner = await prisma.logisticsPartner.create({
 				data: {
 					name,
 					code,

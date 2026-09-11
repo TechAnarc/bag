@@ -37,7 +37,7 @@ export async function handleRefundCreated(
 	}
 
 	// 2. Idempotent refund record upsert
-	await (prisma as any).refundRecord.upsert({
+	await prisma.refundRecord.upsert({
 		where: { razorpayRefundId: entity.id },
 		update: {
 			status: entity.status.toUpperCase(),
@@ -61,7 +61,7 @@ export async function handleRefundCreated(
 	});
 
 	// 3. Link order and update payment record status
-	const paymentRecord = await (prisma as any).paymentRecord.findUnique({
+	const paymentRecord = await prisma.paymentRecord.findUnique({
 		where: { razorpayPaymentId: entity.payment_id },
 	}).catch(() => null);
 
@@ -79,7 +79,7 @@ export async function handleRefundCreated(
 	}
 
 	if (orderId) {
-		await (prisma as any).refundRecord.update({
+		await prisma.refundRecord.update({
 			where: { razorpayRefundId: entity.id },
 			data: { orderId: orderId },
 		});
@@ -171,7 +171,7 @@ export async function handleRefundProcessed(
 		correlationId,
 	});
 
-	await (prisma as any).refundRecord.updateMany({
+	await prisma.refundRecord.updateMany({
 		where: { razorpayRefundId: entity.id },
 		data: {
 			status: "PROCESSED",
@@ -213,7 +213,7 @@ export async function handleRefundFailed(
 		correlationId,
 	});
 
-	await (prisma as any).refundRecord.updateMany({
+	await prisma.refundRecord.updateMany({
 		where: { razorpayRefundId: entity.id },
 		data: {
 			status: "FAILED",

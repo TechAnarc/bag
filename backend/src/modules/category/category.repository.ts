@@ -1,6 +1,7 @@
+import { prisma } from '../../config/database';
 import { PrismaClient, Category, Prisma } from "@prisma/client";
 
-const prisma = new PrismaClient();
+
 
 export class CategoryRepository {
 	async findAll(where: Prisma.CategoryWhereInput = {}): Promise<Category[]> {

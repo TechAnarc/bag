@@ -11,7 +11,7 @@ export class AutonomyController {
 		try {
 			const { category, status, limit = 50, offset = 0 } = req.query;
 
-			const decisions = await (prisma as any).autonomousDecision.findMany({
+			const decisions = await prisma.autonomousDecision.findMany({
 				where: {
 					triggerSignal: category ? (category as string) : undefined,
 					status: status ? (status as string) : undefined,
@@ -43,7 +43,7 @@ export class AutonomyController {
 	 */
 	async getPolicies(req: Request, res: Response) {
 		try {
-			const policies = await (prisma as any).decisionPolicy.findMany({
+			const policies = await prisma.decisionPolicy.findMany({
 				orderBy: { priority: "desc" },
 			});
 			return sendSuccess(res, "Autonomous policies retrieved.", policies);
@@ -60,7 +60,7 @@ export class AutonomyController {
 			const { id } = req.params;
 			const { isActive, priority, thresholds, rules } = req.body;
 
-			const updatedPolicy = await (prisma as any).decisionPolicy.update({
+			const updatedPolicy = await prisma.decisionPolicy.update({
 				where: { id },
 				data: {
 					isActive,
@@ -88,7 +88,7 @@ export class AutonomyController {
 			const { id } = req.params;
 			const { reason, adminId } = req.body;
 
-			const decision = await (prisma as any).autonomousDecision.update({
+			const decision = await prisma.autonomousDecision.update({
 				where: { id },
 				data: {
 					status: "OVERRIDDEN",

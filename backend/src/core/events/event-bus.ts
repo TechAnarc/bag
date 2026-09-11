@@ -132,7 +132,7 @@ class EventBus {
 
 		// 1. Persistence (Replay Capability)
 		try {
-			await (prisma as any).domainEventLog.create({
+			await prisma.domainEventLog.create({
 				data: {
 					eventId: envelope.eventId,
 					eventType: envelope.eventType,

@@ -10,7 +10,7 @@ export class IdempotencyService {
 		if (!key) return null;
 
 		// Currently we only support idempotency for Orders
-		const existingOrder = await (prisma as any).order.findUnique({
+		const existingOrder = await prisma.order.findUnique({
 			where: { idempotencyKey: key },
 			include: {
 				items: { include: { product: true } },

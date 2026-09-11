@@ -69,7 +69,7 @@ export class UPISService {
 
 		try {
 			// 1. RECORD to raw behavioral log (Decoupled from Database Relation)
-			await (prisma as any).behavioralEvent.create({
+			await prisma.behavioralEvent.create({
 				data: {
 					userId: trackingId.startsWith("guest_") ? null : trackingId, // Nullable in DB for non-users
 					eventType: envelope.eventType,
@@ -168,7 +168,7 @@ export class UPISService {
 	 * Computes advanced probability vectors (RFM Models) from raw digital lineage.
 	 */
 	private async recalculateScores(userId: string) {
-		const twin = await (prisma as any).userIntelligence.findUnique({
+		const twin = await prisma.userIntelligence.findUnique({
 			where: { userId },
 		});
 		if (!twin) return;
@@ -259,11 +259,11 @@ export class UPISService {
 	}
 
 	private async getOrCreateTwin(userId: string) {
-		let twin = await (prisma as any).userIntelligence.findUnique({
+		let twin = await prisma.userIntelligence.findUnique({
 			where: { userId },
 		});
 		if (!twin) {
-			twin = await (prisma as any).userIntelligence.create({
+			twin = await prisma.userIntelligence.create({
 				data: { userId },
 			});
 		}
@@ -271,7 +271,7 @@ export class UPISService {
 	}
 
 	private async updateTwin(userId: string, data: any) {
-		return (prisma as any).userIntelligence.update({
+		return prisma.userIntelligence.update({
 			where: { userId },
 			data,
 		});
@@ -282,12 +282,12 @@ export class UPISService {
 	 */
 	async getCustomer360(userId: string) {
 		const [twin, user, recentEvents] = await Promise.all([
-			(prisma as any).userIntelligence.findUnique({ where: { userId } }),
+			prisma.userIntelligence.findUnique({ where: { userId } }),
 			(prisma.user as any).findUnique({
 				where: { id: userId },
 				include: { profile: true },
 			}),
-			(prisma as any).behavioralEvent.findMany({
+			prisma.behavioralEvent.findMany({
 				where: { userId },
 				orderBy: { occurredAt: "desc" },
 				take: 50,
@@ -313,7 +313,7 @@ export class UPISService {
 
 		try {
 			// 1. Patch historical logs to the new definitive identity
-			const updateResult = await (prisma as any).behavioralEvent.updateMany({
+			const updateResult = await prisma.behavioralEvent.updateMany({
 				where: {
 					userId: null,
 					OR: [
@@ -334,7 +334,7 @@ export class UPISService {
 			if (updateResult.count === 0) return; // Nothing to merge
 
 			// 2. Recompute historical counts
-			const allEvents = await (prisma as any).behavioralEvent.findMany({
+			const allEvents = await prisma.behavioralEvent.findMany({
 				where: { userId: userId },
 				select: { eventType: true },
 			});

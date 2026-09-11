@@ -50,7 +50,7 @@ export class AutonomousDecisionEngine {
 			if (!userId) return;
 
 			// Signal Analysis: Cross-tier behavioral check
-			const intel = await (prisma as any).userIntelligence.findUnique({
+			const intel = await prisma.userIntelligence.findUnique({
 				where: { userId },
 			});
 
@@ -120,7 +120,7 @@ export class AutonomousDecisionEngine {
 	// --- Execution Kernel (The Loop) ---
 
 	private async evaluateAndExecute(policyName: string, context: any) {
-		const policy = await (prisma as any).decisionPolicy.findUnique({
+		const policy = await prisma.decisionPolicy.findUnique({
 			where: { name: policyName },
 		});
 
@@ -138,7 +138,7 @@ export class AutonomousDecisionEngine {
 		);
 
 		// 1. Persist Decision Record (Traceability Mandatory)
-		const decision = await (prisma as any).autonomousDecision.create({
+		const decision = await prisma.autonomousDecision.create({
 			data: {
 				policyId: policy.id,
 				policyVersion: policy.version,
@@ -159,7 +159,7 @@ export class AutonomousDecisionEngine {
 			const result = await this.dispatchAction(policyName, context);
 
 			// 3. Close the Loop
-			await (prisma as any).autonomousDecision.update({
+			await prisma.autonomousDecision.update({
 				where: { id: decision.id },
 				data: {
 					status: "EXECUTED",
@@ -170,7 +170,7 @@ export class AutonomousDecisionEngine {
 
 			logger.info(`[ADE:SUCCESS] Decision ID: ${decision.id} completed.`);
 		} catch (error: any) {
-			await (prisma as any).autonomousDecision.update({
+			await prisma.autonomousDecision.update({
 				where: { id: decision.id },
 				data: {
 					status: "FAILED",

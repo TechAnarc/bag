@@ -28,7 +28,7 @@ export async function handleSettlementProcessed(
 		{ correlationId },
 	);
 
-	await (prisma as any).settlementRecord.upsert({
+	await prisma.settlementRecord.upsert({
 		where: { razorpaySettlementId: entity.id },
 		update: {
 			status: entity.status,
@@ -60,7 +60,7 @@ export async function handleSettlementProcessed(
 	});
 
 	// Mark reconciled
-	await (prisma as any).settlementRecord.updateMany({
+	await prisma.settlementRecord.updateMany({
 		where: { razorpaySettlementId: entity.id },
 		data: { isReconciled: true, reconciledAt: new Date() },
 	});
@@ -154,7 +154,7 @@ export async function handlePaymentLinkEvent(
 		correlationId,
 	});
 
-	await (prisma as any).paymentLinkRecord.upsert({
+	await prisma.paymentLinkRecord.upsert({
 		where: { razorpayLinkId: entity.id },
 		update: {
 			status: entity.status,

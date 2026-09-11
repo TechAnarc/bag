@@ -241,7 +241,7 @@ export class AdminService {
 		});
 
 		// 🧠 UPIS: Aggregate Intelligence Stats
-		const upisAggregation = await (prisma as any).userIntelligence.groupBy({
+		const upisAggregation = await prisma.userIntelligence.groupBy({
 			by: ["lifecycleStage"],
 			_count: true,
 			_avg: {
@@ -804,14 +804,14 @@ export class AdminService {
 	// ==================== Business Config ====================
 
 	async getBusinessConfig(tenantId: string = "DEFAULT") {
-		return (prisma as any).businessConfig.findUnique({
+		return prisma.businessConfig.findUnique({
 			where: { tenantId },
 		});
 	}
 
 	async updateBusinessConfig(tenantId: string = "DEFAULT", data: any) {
 		// Ensure tenant exists to satisfy foreign key constraint
-		await (prisma as any).tenant.upsert({
+		await prisma.tenant.upsert({
 			where: { id: tenantId },
 			update: {},
 			create: {
@@ -831,7 +831,7 @@ export class AdminService {
 			authorizedSignatory: "Piyush Soni",
 			invoicePrefix: "BBH-INV",
 		};
-		return (prisma as any).businessConfig.upsert({
+		return prisma.businessConfig.upsert({
 			where: { tenantId },
 			update: data,
 			create: { ...defaults, ...data, tenantId },

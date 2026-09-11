@@ -1,9 +1,10 @@
+import { prisma } from '../config/database';
 import { Request, Response, NextFunction } from "express";
 import fs from "fs";
 import path from "path";
 import { PrismaClient } from "@prisma/client";
 
-const prisma = new PrismaClient();
+
 
 /**
  * MetaInjector Middleware

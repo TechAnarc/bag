@@ -41,7 +41,7 @@ export class ReconciliationService {
 					: "DISCREPANT";
 
 		try {
-			await (prisma as any).reconciliationLedger.create({
+			await prisma.reconciliationLedger.create({
 				data: {
 					id: uuidv4(),
 					type: opts.type,
@@ -81,7 +81,7 @@ export class ReconciliationService {
 		newRefundAmountPaise: number,
 	): Promise<{ valid: boolean; totalRefunded: number; message?: string }> {
 		try {
-			const payment = await (prisma as any).paymentRecord.findUnique({
+			const payment = await prisma.paymentRecord.findUnique({
 				where: { razorpayPaymentId },
 			});
 
@@ -89,7 +89,7 @@ export class ReconciliationService {
 				return { valid: false, totalRefunded: 0, message: "Payment not found" };
 			}
 
-			const existingRefunds = await (prisma as any).refundRecord.findMany({
+			const existingRefunds = await prisma.refundRecord.findMany({
 				where: { razorpayPaymentId, status: { not: "FAILED" } },
 				select: { amountPaise: true },
 			});
@@ -125,7 +125,7 @@ export class ReconciliationService {
 	 * Get all discrepant records for operational review.
 	 */
 	async getDiscrepancies(limit = 50): Promise<any[]> {
-		return (prisma as any).reconciliationLedger.findMany({
+		return prisma.reconciliationLedger.findMany({
 			where: { status: "DISCREPANT" },
 			orderBy: { createdAt: "desc" },
 			take: limit,
@@ -136,7 +136,7 @@ export class ReconciliationService {
 	 * Mark a reconciliation entry as resolved.
 	 */
 	async resolve(id: string, notes?: string): Promise<void> {
-		await (prisma as any).reconciliationLedger.update({
+		await prisma.reconciliationLedger.update({
 			where: { id },
 			data: { status: "RESOLVED", resolvedAt: new Date(), notes },
 		});

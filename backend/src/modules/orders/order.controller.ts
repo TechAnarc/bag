@@ -135,6 +135,9 @@ export class OrderController {
 	async getUserOrders(req: AuthRequest, res: Response) {
 		try {
 			const userId = req.auth?.id;
+			const codeQuery = req.query.code;
+			const codeStr = Array.isArray(codeQuery) ? codeQuery[0] : codeQuery;
+			const code = (codeStr as string).trim();
 			if (!userId) {
 				return sendError(res, "Unauthorized", 401);
 			}

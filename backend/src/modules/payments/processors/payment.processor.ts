@@ -31,7 +31,7 @@ export async function handlePaymentAuthorized(
 	);
 
 	// 1. Upsert PaymentRecord
-	await (prisma as any).paymentRecord.upsert({
+	await prisma.paymentRecord.upsert({
 		where: { razorpayPaymentId: entity.id },
 		update: {
 			status: "AUTHORIZED",
@@ -137,7 +137,7 @@ export async function handlePaymentCaptured(
 	);
 
 	// 1. Upsert PaymentRecord
-	await (prisma as any).paymentRecord.upsert({
+	await prisma.paymentRecord.upsert({
 		where: { razorpayPaymentId: entity.id },
 		update: {
 			status: "CAPTURED",
@@ -173,7 +173,7 @@ export async function handlePaymentCaptured(
 
 		if (order && order.paymentStatus !== "COMPLETED") {
 			// Link orderId to PaymentRecord
-			await (prisma as any).paymentRecord.updateMany({
+			await prisma.paymentRecord.updateMany({
 				where: { razorpayPaymentId: entity.id },
 				data: { orderId: order.id },
 			}).catch(() => {});
@@ -294,7 +294,7 @@ export async function handlePaymentFailed(
 	const retryEligible = entity.error_code !== "BAD_REQUEST_ERROR";
 
 	// 1. Upsert PaymentRecord with structured failure metadata
-	await (prisma as any).paymentRecord.upsert({
+	await prisma.paymentRecord.upsert({
 		where: { razorpayPaymentId: entity.id },
 		update: {
 			status: "FAILED",

@@ -1,3 +1,4 @@
+import { prisma } from '../../config/database';
 /**
  * Payment Controller — Enterprise Webhook Orchestration Layer
  *
@@ -219,10 +220,10 @@ export class PaymentController {
 		try {
 			const { prisma } = await import("../../config/database");
 			const [total, processed, failed, deadLettered] = await Promise.all([
-				(prisma as any).webhookEvent.count(),
-				(prisma as any).webhookEvent.count({ where: { status: "PROCESSED" } }),
-				(prisma as any).webhookEvent.count({ where: { status: "FAILED" } }),
-				(prisma as any).webhookEvent.count({
+				prisma.webhookEvent.count(),
+				prisma.webhookEvent.count({ where: { status: "PROCESSED" } }),
+				prisma.webhookEvent.count({ where: { status: "FAILED" } }),
+				prisma.webhookEvent.count({
 					where: { status: "DEAD_LETTERED" },
 				}),
 			]);

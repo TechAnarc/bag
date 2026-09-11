@@ -24,7 +24,7 @@ export class AdminCopilotAgent {
 				})
 			: null;
 
-		const decisions = await (prisma as any).autonomousDecision.findMany({
+		const decisions = await prisma.autonomousDecision.findMany({
 			where: {
 				entityType: "ORDER",
 				entityId: context.orderId ?? undefined,
