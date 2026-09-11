@@ -50,6 +50,9 @@ function Checkout() {
     );
   }
 
+  // Idempotency key to prevent double charges on duplicate submissions
+  const [idempotencyKey] = React.useState(() => crypto.randomUUID());
+
   const placeOrder = async () => {
     if (isPlacing) return;
     setIsPlacing(true);
@@ -72,6 +75,7 @@ function Checkout() {
           quantity: i.qty,
         })),
         deliveryMethod: "SHIP",
+        idempotencyKey,
       };
 
       const res = await api.post("/orders", payload);

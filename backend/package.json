@@ -1,7 +1,7 @@
 {
 	"name": "triveni-backend",
 	"version": "1.0.0",
-	"description": "Production-ready backend for Triveni - Imitation Jewellery Platform",
+	"description": "Production-ready backend for Bombay Bag House Platform",
 	"main": "src/index.ts",
 	"scripts": {
 		"build": "npx prisma generate && node scripts/esbuild-compile.js",

@@ -81,9 +81,8 @@ export class WarehouseService {
 
 				// 2. Actually deduct from product inventory
 				for (const item of order.items) {
-					const product = await tx.product.findUnique({
-						where: { id: item.productId },
-					});
+					const rawProds = await tx.$queryRaw<any[]>`SELECT id, inventory FROM "Product" WHERE id = ${item.productId} FOR UPDATE`;
+					const product = rawProds[0];
 					if (product && product.inventory) {
 						const inv = product.inventory as any;
 						const newQty = (inv.quantity || 0) - item.quantity;

@@ -365,10 +365,8 @@ export async function handlePaymentFailed(
 
 				// Restore stock for each item upon payment failure
 				for (const item of order.items) {
-					const prod = await tx.product.findUnique({
-						where: { id: item.productId },
-						select: { id: true, inventory: true },
-					});
+					const rawProds = await tx.$queryRaw<any[]>`SELECT id, inventory FROM "Product" WHERE id = ${item.productId} FOR UPDATE`;
+					const prod = rawProds[0];
 					if (prod) {
 						const currentInv = (prod.inventory as any) || { quantity: 0, inStock: true };
 						const currentQty = typeof currentInv.quantity === "number" ? currentInv.quantity : 0;

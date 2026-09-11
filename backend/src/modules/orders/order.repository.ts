@@ -37,10 +37,8 @@ export class OrderRepository {
 		return prisma.$transaction(async (tx) => {
 			// 1. Verify stock and decrement inventory for each item
 			for (const item of data.items) {
-				const prod = await tx.product.findUnique({
-					where: { id: item.productId },
-					select: { id: true, name: true, inventory: true },
-				});
+				const rawProds = await tx.$queryRaw<any[]>`SELECT id, name, inventory FROM "Product" WHERE id = ${item.productId} FOR UPDATE`;
+				const prod = rawProds[0];
 
 				if (!prod) {
 					throw new Error(`Product not found: ${item.productId}`);
