@@ -188,7 +188,8 @@ export class OrderController {
 				return sendError(res, "Order number is required", 400);
 			}
 
-			const order = await orderService.getOrderByNumber(orderNumber.trim().toUpperCase());
+			const numStr = (Array.isArray(orderNumber) ? orderNumber[0] : orderNumber) as string;
+			const order = await orderService.getOrderByNumber(numStr.trim().toUpperCase());
 			if (!order) {
 				return sendError(res, "Order not found", 404);
 			}

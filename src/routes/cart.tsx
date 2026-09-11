@@ -6,6 +6,7 @@ import { SiteLayout } from "@/components/site-layout";
 import { ProductCard } from "@/components/product-card";
 import { inr } from "@/lib/catalog";
 import { useStore } from "@/lib/store";
+import api from "@/lib/axios";
 
 export const Route = createFileRoute("/cart")({
   head: () => ({ meta: [{ title: "Your Bag — Triveni Bombay Bag House" }] }),
@@ -17,17 +18,36 @@ function CartPage() {
   const items = cart.map((c) => ({ ...c, product: products.find((p) => p.id === c.id)! })).filter((i) => i.product);
   const [coupon, setCoupon] = useState("");
   const [discount, setDiscount] = useState(0);
+  const [appliedCode, setAppliedCode] = useState<string | null>(null);
+  const [isApplying, setIsApplying] = useState(false);
   const recommendations = products.filter((p) => !cart.find((c) => c.id === p.id)).slice(0, 4);
   const shipping = cartSubtotal > 2499 || cartSubtotal === 0 ? 0 : 99;
   const total = Math.max(0, cartSubtotal + shipping - discount);
 
-  const applyCoupon = () => {
-    if (coupon.trim().toUpperCase() === "TBH10") {
-      setDiscount(Math.round(cartSubtotal * 0.1));
-      toast.success("Coupon applied · 10% off");
-    } else {
+  const applyCoupon = async () => {
+    const code = coupon.trim().toUpperCase();
+    if (!code) return;
+    if (appliedCode === code) { toast.info("Coupon already applied"); return; }
+    setIsApplying(true);
+    try {
+      const res = await api.post("/coupons/validate", { code, itemTotal: cartSubtotal });
+      const data = res.data?.data;
+      if (data?.isFreeShipping) {
+        setDiscount(shipping);
+        toast.success("Free shipping applied!");
+      } else {
+        setDiscount(data?.discountAmount ?? 0);
+        const fmt = data?.type === "PERCENTAGE" ? `${data?.type} ${data?.value}% off` : `₹${data?.discountAmount} off`;
+        toast.success(`Coupon applied · ${fmt}`);
+      }
+      setAppliedCode(code);
+    } catch (err: any) {
+      const msg = err.response?.data?.message || err.message || "Invalid coupon";
+      toast.error(msg);
       setDiscount(0);
-      toast.error("Invalid coupon");
+      setAppliedCode(null);
+    } finally {
+      setIsApplying(false);
     }
   };
 
@@ -88,12 +108,13 @@ function CartPage() {
               <div className="mt-5 flex gap-2">
                 <div className="relative flex-1">
                   <Tag className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                  <input value={coupon} onChange={(e) => setCoupon(e.target.value)} placeholder="Coupon (try TBH10)" className="w-full rounded-full border border-border bg-background py-2 pl-9 pr-3 text-xs" />
+                  <input value={coupon} onChange={(e) => setCoupon(e.target.value)} onKeyDown={(e) => e.key === "Enter" && applyCoupon()} placeholder="Promo / coupon code" className="w-full rounded-full border border-border bg-background py-2 pl-9 pr-3 text-xs" />
                 </div>
-                <button onClick={applyCoupon} className="rounded-full bg-ink px-4 text-xs uppercase tracking-widest text-cream">Apply</button>
+                <button onClick={applyCoupon} disabled={isApplying} className="rounded-full bg-ink px-4 text-xs uppercase tracking-widest text-cream disabled:opacity-60">{isApplying ? "..." : "Apply"}</button>
               </div>
+              {appliedCode && <p className="mt-1 text-[11px] text-emerald-600">✓ Code <strong>{appliedCode}</strong> applied</p>}
 
-              <Link to="/checkout" className="mt-5 grid place-items-center rounded-full bg-gradient-gold py-3.5 text-xs uppercase tracking-widest text-ink">Checkout</Link>
+              <Link to="/checkout" search={{ couponCode: appliedCode ?? undefined }} className="mt-5 grid place-items-center rounded-full bg-gradient-gold py-3.5 text-xs uppercase tracking-widest text-ink">Checkout</Link>
               <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-muted-foreground"><Truck className="size-3.5" /> Free shipping over ₹2,499</p>
             </aside>
           </div>

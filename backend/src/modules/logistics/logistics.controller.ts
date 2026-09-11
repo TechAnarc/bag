@@ -24,7 +24,7 @@ export class LogisticsController {
 	 */
 	async getPartnerPerformance(req: Request, res: Response) {
 		try {
-			const { id } = req.params;
+			const id = req.params.id as string;
 			const partner = await prisma.logisticsPartner.findUnique({
 				where: { id },
 				include: {

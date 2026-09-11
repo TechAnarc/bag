@@ -51,7 +51,7 @@ function Checkout() {
   }
 
   // Idempotency key to prevent double charges on duplicate submissions
-  const [idempotencyKey] = React.useState(() => crypto.randomUUID());
+  const [idempotencyKey] = useState(() => crypto.randomUUID());
 
   const placeOrder = async () => {
     if (isPlacing) return;

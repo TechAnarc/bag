@@ -57,7 +57,7 @@ export class AutonomyController {
 	 */
 	async updatePolicy(req: Request, res: Response) {
 		try {
-			const { id } = req.params;
+			const id = req.params.id as string;
 			const { isActive, priority, thresholds, rules } = req.body;
 
 			const updatedPolicy = await prisma.decisionPolicy.update({
@@ -85,7 +85,7 @@ export class AutonomyController {
 	 */
 	async overrideDecision(req: Request, res: Response) {
 		try {
-			const { id } = req.params;
+			const id = req.params.id as string;
 			const { reason, adminId } = req.body;
 
 			const decision = await prisma.autonomousDecision.update({

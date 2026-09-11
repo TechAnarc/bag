@@ -406,4 +406,30 @@ export const adminApi = {
         const response = await api.delete(`/reviews/admin/${reviewId}`);
         return response.data;
     },
+
+    // Coupon Management (Real API - not BusinessConfig)
+    async listCoupons() {
+        const response = await api.get("/coupons");
+        return response.data;
+    },
+
+    async createCoupon(data: { code: string; type: string; value: number; maxDiscount?: number; minOrderValue?: number; usageLimit?: number; perCustomerLimit?: number; isActive?: boolean; expiresAt?: string; description?: string }) {
+        const response = await api.post("/coupons", data);
+        return response.data;
+    },
+
+    async updateCoupon(couponId: string, data: Record<string, unknown>) {
+        const response = await api.put(`/coupons/${couponId}`, data);
+        return response.data;
+    },
+
+    async toggleCouponStatus(couponId: string) {
+        const response = await api.patch(`/coupons/${couponId}/toggle`);
+        return response.data;
+    },
+
+    async deleteCoupon(couponId: string) {
+        const response = await api.delete(`/coupons/${couponId}`);
+        return response.data;
+    },
 };

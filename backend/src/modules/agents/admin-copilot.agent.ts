@@ -42,12 +42,12 @@ export class AdminCopilotAgent {
 			description:
 				"Loaded the recent AutonomousDecision records and related policy metadata for the selected stream.",
 			groundedIn: [
-				...(order ? [{ type: "ORDER", id: order.id }] : []),
+				...(order ? [{ type: "ORDER" as const, id: order.id }] : []),
 				...decisions.map((d: any) => ({
-					type: "DECISION",
+					type: "DECISION" as const,
 					id: d.id as string,
 				})),
-			],
+			] as any,
 		});
 
 		const answer = this.composeExplanation(order, decisions);

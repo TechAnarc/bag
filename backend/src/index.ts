@@ -25,6 +25,7 @@ import upisAdminRoutes from "./modules/upis/admin/admin.routes";
 import { agentsRoutes } from "./modules/agents/agents.routes";
 import paymentRoutes from "./modules/payments/payment.routes";
 import seoRoutes from "./modules/seo/seo.routes";
+import couponRoutes from "./modules/coupons/coupon.routes";
 import { seoNormalizationMiddleware } from "./middleware/seo.middleware";
 import { metaInjectorMiddleware } from "./middleware/meta-injector.middleware";
 
@@ -385,6 +386,7 @@ app.use("/api/v1/admin", authLimiter, adminRoutes);
 app.use("/api/v1/upis", apiLimiter, upisRouter);
 app.use("/api/v1/admin/upis", authLimiter, authenticateAdmin, upisAdminRoutes);
 app.use("/api/v1/agents", apiLimiter, agentsRoutes);
+app.use("/api/v1/coupons", apiLimiter, couponRoutes);
 
 // --- 7. FRONTEND SERVING & META INJECTION ---
 // Serve static files first

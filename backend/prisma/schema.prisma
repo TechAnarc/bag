@@ -262,6 +262,74 @@ model Category {
   @@index([tenantId])
 }
 
+/// Authoritative server-side coupon model. PostgreSQL is the single source of truth.
+model Coupon {
+  id                String            @id @default(uuid())
+  code              String            @unique
+  type              CouponType
+  value             Float             @default(0)
+  maxDiscount       Float?
+  minOrderValue     Float             @default(0)
+  usageLimit        Int?
+  usedCount         Int               @default(0)
+  perCustomerLimit  Int?
+  isActive          Boolean           @default(true)
+  validFrom         DateTime          @default(now())
+  expiresAt         DateTime?
+  description       String?
+  createdByAdminId  String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  usages    CouponUsage[]
+  auditLogs CouponAuditLog[]
+
+  @@index([code])
+  @@index([isActive])
+  @@index([expiresAt])
+}
+
+model CouponUsage {
+  id          String   @id @default(uuid())
+  couponId    String
+  couponCode  String
+  orderId     String   @unique
+  userId      String
+  discountAmt Float
+  redeemedAt  DateTime @default(now())
+
+  coupon Coupon @relation(fields: [couponId], references: [id])
+
+  @@index([couponId])
+  @@index([userId])
+  @@index([orderId])
+}
+
+model CouponAuditLog {
+  id          String   @id @default(uuid())
+  couponId    String
+  couponCode  String
+  event       String
+  actorId     String?
+  actorType   String   @default("SYSTEM")
+  orderId     String?
+  userId      String?
+  metadata    Json?
+  occurredAt  DateTime @default(now())
+
+  coupon Coupon @relation(fields: [couponId], references: [id])
+
+  @@index([couponId])
+  @@index([event])
+  @@index([orderId])
+}
+
+enum CouponType {
+  PERCENTAGE
+  FIXED_AMOUNT
+  FREE_SHIPPING
+}
+
 model Order {
   id                String               @id @default(uuid())
   tenantId          String?
@@ -297,6 +365,10 @@ model Order {
   riskReport        Json?
   riskScore         Float                @default(0)
   fraudScore        Float                @default(0)
+  /// Coupon tracking fields - populated when a coupon is applied
+  couponCode        String?
+  couponId          String?
+  couponDiscount    Float                @default(0)
   invoice           Invoice?
   ledgerEntries     LedgerEntry[]
   deliveryAgent     DeliveryAgent?       @relation(fields: [deliveryAgentId], references: [id])

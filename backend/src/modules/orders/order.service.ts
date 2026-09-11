@@ -9,6 +9,7 @@ import { OrderStateMachine } from "./order.state-machine";
 import { SocketService } from "../../config/socket";
 import { eventBus, DomainEvent } from "../../core/events/event-bus";
 import { env } from "../../config/env";
+import { couponService, CouponValidationResult } from "../coupons/coupon.service";
 
 export class OrderService {
 	private orderRepo = new OrderRepository();
@@ -53,7 +54,9 @@ export class OrderService {
 	}
 
 	/**
-	 * Create order from cart
+	 * Create order from cart.
+	 * SECURITY: Frontend totals and discount amounts are completely ignored.
+	 * All pricing is computed server-side from authoritative product/coupon DB records.
 	 */
 	async createOrderFromCart(
 		userId: string,
@@ -72,26 +75,15 @@ export class OrderService {
 			if (existing) return existing;
 		}
 
-		let couponDiscount = 0;
-		let appliedCouponCode: string | undefined = undefined;
-
-		// 2. Server-Side Coupon Authority Validation
-		if (couponCode && typeof couponCode === "string" && couponCode.trim().length > 0) {
-			const cleanCode = couponCode.trim().toUpperCase();
-			// TODO: Add proper coupon model. Skipping lookup as BusinessConfig does not support it.
-			console.warn("[OrderService] Coupon feature is currently disabled pending schema update.");
-		}
-
+		// 2. Resolve cart items and compute item_total from authoritative product prices
 		let cartItems: any[] = [];
-		let cartSubtotal = 0;
-		let cartTotal = 0;
-		let cartTax = 0;
+		let pricingItems: { price: number; mrp: number; quantity: number }[] = [];
 
 		if (directItems && directItems.length > 0) {
 			const productIds = directItems.map((i) => i.productId);
 			const products = await this.orderRepo.getProductsByIds(productIds);
 
-			const pricingItems = directItems.map((item) => {
+			pricingItems = directItems.map((item) => {
 				const product = products.find((p) => p.id === item.productId);
 				if (!product) throw new Error(`Product not found: ${item.productId}`);
 				return {
@@ -101,56 +93,56 @@ export class OrderService {
 				};
 			});
 
-			const totals = calculateOrderTotals(pricingItems, deliveryMethod, couponDiscount);
 			cartItems = directItems.map((item) => {
 				const product = products.find((p) => p.id === item.productId);
 				return { productId: item.productId, quantity: item.quantity, product };
 			});
-
-			cartSubtotal = totals.item_total;
-			const orderTotals = totals;
-			return this.finalizeOrderCreation(
-				userId,
-				paymentMethod,
-				shippingAddress,
-				billingAddress,
-				customerNotes,
-				idempotencyKey,
-				cartItems,
-				orderTotals,
-				deliveryMethod,
-			);
 		} else {
 			const cart = await this.cartService.getUserCart(userId);
 			if (!cart.items || cart.items.length === 0)
 				throw new Error("Cart is empty");
 
-			const pricingItems = cart.items.map((item) => ({
-				price:
-					item.product.sellingPrice ||
-					item.product.discountPrice ||
-					item.product.price,
+			pricingItems = cart.items.map((item) => ({
+				price: item.product.sellingPrice || item.product.discountPrice || item.product.price,
 				mrp: item.product.basePrice || item.product.price * 1.5,
 				quantity: item.quantity,
 			}));
-
-			const baseItemTotal = pricingItems.reduce((acc, p) => acc + p.price * p.quantity, 0);
-
-			const totals = calculateOrderTotals(pricingItems, deliveryMethod, couponDiscount);
-
-			return this.finalizeOrderCreation(
-				userId,
-				paymentMethod,
-				shippingAddress,
-				billingAddress,
-				customerNotes,
-				idempotencyKey,
-				cart.items,
-				totals,
-				deliveryMethod,
-			);
+			cartItems = cart.items;
 		}
+
+		const itemTotal = pricingItems.reduce((acc, p) => acc + p.price * p.quantity, 0);
+
+		// 3. Server-Side Coupon Authority Validation
+		// Frontend coupon codes are checked but frontend-calculated discounts are NEVER trusted.
+		let couponValidation: CouponValidationResult | null = null;
+		let couponDiscount = 0;
+
+		if (couponCode && typeof couponCode === "string" && couponCode.trim().length > 0) {
+			const result = await couponService.validateCoupon(couponCode, userId, itemTotal);
+			if (!result.valid) {
+				throw new Error(`Coupon error: ${(result as any).reason}`);
+			}
+			couponValidation = result;
+			couponDiscount = result.isFreeShipping ? 0 : result.discountAmount;
+		}
+
+		// 4. Calculate authoritative order totals (couponDiscount is server-computed, not frontend-trusted)
+		const totals = calculateOrderTotals(pricingItems, deliveryMethod, couponDiscount);
+
+		return this.finalizeOrderCreation(
+			userId,
+			paymentMethod,
+			shippingAddress,
+			billingAddress,
+			customerNotes,
+			idempotencyKey,
+			cartItems,
+			totals,
+			deliveryMethod,
+			couponValidation,
+		);
 	}
+
 
 	private async finalizeOrderCreation(
 		userId: string,
@@ -162,6 +154,7 @@ export class OrderService {
 		cartItems: any[],
 		totals: any,
 		deliveryMethod?: string, // 'SHIP' | 'PICKUP'
+		couponValidation?: CouponValidationResult | null,
 	) {
 		// Phase 4: SLA Calculation (PACKED within 6h)
 		const slaDeadline = new Date(Date.now() + 6 * 60 * 60 * 1000);
@@ -207,10 +200,37 @@ export class OrderService {
 			slaDeadline,
 			estimatedDelivery,
 			idempotencyKey,
+			// Coupon tracking fields
+			...(couponValidation ? {
+				couponCode: couponValidation.code,
+				couponId: couponValidation.couponId,
+				couponDiscount: couponValidation.discountAmount,
+			} : {}),
 		};
 
-		// Create order
+		// Create order (inventory deduction uses SELECT FOR UPDATE inside createOrder)
 		const order = await this.orderRepo.createOrder(orderData);
+
+		// Apply coupon usage atomically in a separate transaction
+		// (AFTER order is committed, so partial failure rolls back coupon increment separately)
+		if (couponValidation) {
+			try {
+				await prisma.$transaction(async (tx) => {
+					await couponService.applyCouponInTransaction(
+						tx,
+						couponValidation.couponId,
+						couponValidation.code,
+						order.id,
+						userId,
+						couponValidation.discountAmount,
+					);
+				});
+			} catch (couponErr: any) {
+				// Log but don't fail the order - order is already committed
+				// Reconciliation can handle this edge case
+				console.error("[OrderService] Coupon usage tracking failed after order creation:", couponErr.message, { orderId: order.id, couponCode: couponValidation.code });
+			}
+		}
 
 		// Formalize Domain Event
 		eventBus.emitDomainEvent(DomainEvent.ORDER_CREATED, order);
