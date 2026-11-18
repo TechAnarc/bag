@@ -7,6 +7,15 @@ const getSanitizedUrl = (url: string) => {
 
 	// RENDER FIX: Render doesn't support IPv6. The "db.project.supabase.co" hostname is often IPv6-only.
 	// We MUST use the Supabase Pooler hostname which supports IPv4.
+	const directMatch = sanitized.match(/@db\.([a-z0-9]+)\.supabase\.co(?::\d+)?\//i);
+	if (directMatch && process.env.SUPABASE_POOLER_HOST) {
+		const projectRef = directMatch[1];
+		const poolerHost = process.env.SUPABASE_POOLER_HOST.trim();
+		sanitized = sanitized
+			.replace("://postgres:", `://postgres.${projectRef}:`)
+			.replace(`@db.${projectRef}.supabase.co:5432/`, `@${poolerHost}:6543/`)
+			.replace(`@db.${projectRef}.supabase.co/`, `@${poolerHost}:6543/`);
+	}
 	if (sanitized.includes("db.obndverrhnewlcapkxam.supabase.co")) {
 		logger.warn(
 			"⚠️ [DB] Detected Direct Hostname (likely IPv6-only). Redirecting to IPv4 Pooler...",

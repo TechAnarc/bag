@@ -1,10 +1,10 @@
 import { Router } from "express";
 import { adminIntelligenceController } from "./admin-intelligence.controller";
-// import { authenticate, authorize } from '../../../middleware/auth.middleware';
+import { authenticateAdmin } from "../../../middleware/adminAuth.middleware";
 
 const router = Router();
 
-// router.use(authenticate, authorize(['ADMIN']));
+router.use(authenticateAdmin);
 
 /**
  * @route GET /api/v1/admin/upis/users

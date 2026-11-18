@@ -1,10 +1,14 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import {
   ShoppingBag, Heart, Search, Menu, ArrowRight, Star, Plus,
   Truck, ShieldCheck, Sparkles, Award, Headphones, Instagram,
   MessageCircle, MapPin, ChevronRight, Eye,
 } from "lucide-react";
+import { toast } from "sonner";
+import { useStore } from "@/lib/store";
+import type { Product } from "@/lib/catalog";
+import api from "@/lib/axios";
 
 import logo from "@/assets/logo-tbh.png";
 import hero from "@/assets/hero-bags.jpg";
@@ -35,29 +39,29 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-const NAV = ["Women", "Men", "Travel", "School", "Office", "Signature"];
-
-const CATEGORIES = [
-  { name: "Women's Handbags", count: "120+ styles", img: catWomen },
-  { name: "Office & Laptop", count: "Executive line", img: catOffice },
-  { name: "School & Kids", count: "Back-to-school", img: catSchool },
-  { name: "Travel & Trolley", count: "Cabin to check-in", img: catTravel },
-  { name: "Backpacks", count: "Daily companions", img: catBackpack },
-  { name: "Wallets & Pouches", count: "Accessories", img: catWallet },
+const NAV: { label: string; category?: string }[] = [
+  { label: "Women", category: "handbags" },
+  { label: "Men", category: "office" },
+  { label: "Travel", category: "travel" },
+  { label: "School", category: "school" },
+  { label: "Office", category: "office" },
+  { label: "Signature", category: "signature" },
 ];
 
-const PRODUCTS = [
-  { name: "Noir Saffiano Tote", price: 4490, was: 5990, badge: "Bestseller", img: p1, rating: 4.9 },
-  { name: "Cognac Executive Messenger", price: 5890, badge: "New", img: p2, rating: 4.8 },
-  { name: "Aurum Cabin Trolley 20\"", price: 8990, was: 11990, badge: "Trending", img: p3, rating: 4.9 },
-  { name: "Heritage Atlas Backpack", price: 3690, badge: "New", img: p4, rating: 4.7 },
+const CATEGORIES = [
+  { name: "Women's Handbags", slug: "handbags", count: "120+ styles", img: catWomen },
+  { name: "Office & Laptop", slug: "office", count: "Executive line", img: catOffice },
+  { name: "School & Kids", slug: "school", count: "Back-to-school", img: catSchool },
+  { name: "Travel & Trolley", slug: "travel", count: "Cabin to check-in", img: catTravel },
+  { name: "Backpacks", slug: "backpacks", count: "Daily companions", img: catBackpack },
+  { name: "Wallets & Pouches", slug: "wallets", count: "Accessories", img: catWallet },
 ];
 
 const COLLECTIONS = [
-  { title: "Executive", line: "For the boardroom and beyond", img: catOffice, cta: "Discover the suite" },
-  { title: "Women's Luxury", line: "Timeless silhouettes, modern soul", img: showcaseWomen, cta: "Shop the women's edit" },
-  { title: "Travel", line: "Engineered for the long road", img: showcaseTravel, cta: "Explore luggage" },
-  { title: "Signature Series", line: "The TBH signature, in gold", img: showcaseSignature, cta: "Enter the signature" },
+  { title: "Executive", category: "office", line: "For the boardroom and beyond", img: catOffice, cta: "Discover the suite" },
+  { title: "Women's Luxury", category: "handbags", line: "Timeless silhouettes, modern soul", img: showcaseWomen, cta: "Shop the women's edit" },
+  { title: "Travel", category: "travel", line: "Engineered for the long road", img: showcaseTravel, cta: "Explore luggage" },
+  { title: "Signature Series", category: "signature", line: "The TBH signature, in gold", img: showcaseSignature, cta: "Enter the signature" },
 ];
 
 const FEATURES = [
@@ -114,6 +118,8 @@ function Announcement() {
 }
 
 function Header() {
+  const { cartCount, wishlist } = useStore();
+  const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   useEffect(() => {
@@ -124,25 +130,25 @@ function Header() {
   return (
     <header className={`sticky top-0 z-50 transition-all duration-500 ${scrolled ? "backdrop-blur-xl bg-background/70 border-b border-border" : "bg-transparent"}`}>
       <div className="mx-auto max-w-7xl px-6 grid grid-cols-[auto_1fr_auto] items-center gap-6 h-20">
-        <a href="#" className="flex items-center gap-3 shrink-0 group">
+        <Link to="/" className="flex items-center gap-3 shrink-0 group">
           <img src={logo} alt="TBH" width={44} height={44} className="h-11 w-11 object-contain drop-shadow-[0_2px_8px_rgba(212,175,55,0.35)] group-hover:rotate-3 transition-transform duration-500" />
           <div className="hidden sm:block leading-tight">
             <div className="font-serif text-base tracking-wide">Triveni Bombay</div>
             <div className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">Bag House</div>
           </div>
-        </a>
+        </Link>
         <nav className="hidden lg:flex items-center justify-center gap-10 text-sm font-medium">
           {NAV.map(n => (
-            <a key={n} href="#" className="relative py-2 group">
-              {n}
+            <Link key={n.label} to="/shop" search={{ category: n.category }} className="relative py-2 group">
+              {n.label}
               <span className="absolute left-0 right-0 -bottom-0.5 h-px bg-gradient-gold scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-500" />
-            </a>
+            </Link>
           ))}
         </nav>
         <div className="flex items-center gap-1 sm:gap-2 justify-self-end">
-          <IconBtn label="Search"><Search className="h-[18px] w-[18px]" /></IconBtn>
-          <IconBtn label="Wishlist"><Heart className="h-[18px] w-[18px]" /></IconBtn>
-          <IconBtn label="Bag" badge={2}><ShoppingBag className="h-[18px] w-[18px]" /></IconBtn>
+          <IconBtn label="Search" onClick={() => navigate({ to: "/shop" })}><Search className="h-[18px] w-[18px]" /></IconBtn>
+          <IconBtn label="Wishlist" badge={wishlist.length > 0 ? wishlist.length : undefined} onClick={() => navigate({ to: "/wishlist" })}><Heart className="h-[18px] w-[18px]" /></IconBtn>
+          <IconBtn label="Bag" badge={cartCount > 0 ? cartCount : undefined} onClick={() => navigate({ to: "/cart" })}><ShoppingBag className="h-[18px] w-[18px]" /></IconBtn>
           <button onClick={() => setOpen(v => !v)} className="lg:hidden ml-1 grid place-items-center h-10 w-10 rounded-full hover:bg-muted" aria-label="Menu">
             <Menu className="h-5 w-5" />
           </button>
@@ -151,7 +157,11 @@ function Header() {
       {open && (
         <div className="lg:hidden border-t border-border bg-background animate-fade-up">
           <nav className="px-6 py-4 flex flex-col gap-1">
-            {NAV.map(n => <a key={n} href="#" className="py-3 border-b border-border/60 text-sm">{n}</a>)}
+            {NAV.map(n => (
+              <Link key={n.label} to="/shop" search={{ category: n.category }} onClick={() => setOpen(false)} className="py-3 border-b border-border/60 text-sm">
+                {n.label}
+              </Link>
+            ))}
           </nav>
         </div>
       )}
@@ -159,9 +169,9 @@ function Header() {
   );
 }
 
-function IconBtn({ children, label, badge }: { children: React.ReactNode; label: string; badge?: number }) {
+function IconBtn({ children, label, badge, onClick }: { children: React.ReactNode; label: string; badge?: number; onClick?: () => void }) {
   return (
-    <button aria-label={label} className="relative grid place-items-center h-10 w-10 rounded-full hover:bg-muted transition-colors">
+    <button onClick={onClick} aria-label={label} className="relative grid place-items-center h-10 w-10 rounded-full hover:bg-muted transition-colors">
       {children}
       {badge !== undefined && (
         <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 grid place-items-center rounded-full bg-gradient-gold text-[10px] font-semibold text-[var(--ink)]">{badge}</span>
@@ -203,8 +213,12 @@ function Hero() {
             From school days to global adventures — discover premium bags, crafted for every lifestyle, every story, every you.
           </p>
           <div className="mt-10 flex flex-wrap gap-3">
-            <BtnGold>Shop Collection <ArrowRight className="h-4 w-4" /></BtnGold>
-            <BtnGhost>Explore Categories</BtnGhost>
+            <Link to="/shop" className="group inline-flex items-center gap-2 bg-gradient-gold text-[var(--ink)] px-7 py-3.5 text-sm font-semibold tracking-wide shadow-gold hover:shadow-luxe transition-all duration-300 hover:-translate-y-0.5">
+              Shop Collection <ArrowRight className="h-4 w-4" />
+            </Link>
+            <a href="#featured-categories" className="inline-flex items-center gap-2 border border-[var(--cream)]/30 text-[var(--cream)] px-7 py-3.5 text-sm font-medium tracking-wide hover:bg-[var(--cream)] hover:text-[var(--ink)] transition-all duration-300">
+              Explore Categories
+            </a>
           </div>
 
           <div className="mt-16 grid grid-cols-3 gap-8 max-w-md">
@@ -229,21 +243,6 @@ function Hero() {
       {/* Floating gold orb */}
       <div className="hidden lg:block absolute right-[8%] top-1/2 -translate-y-1/2 h-72 w-72 rounded-full bg-gradient-gold blur-[80px] opacity-30 animate-float pointer-events-none" />
     </section>
-  );
-}
-
-function BtnGold({ children }: { children: React.ReactNode }) {
-  return (
-    <button className="group inline-flex items-center gap-2 bg-gradient-gold text-[var(--ink)] px-7 py-3.5 text-sm font-semibold tracking-wide shadow-gold hover:shadow-luxe transition-all duration-300 hover:-translate-y-0.5">
-      {children}
-    </button>
-  );
-}
-function BtnGhost({ children }: { children: React.ReactNode }) {
-  return (
-    <button className="inline-flex items-center gap-2 border border-[var(--cream)]/30 text-[var(--cream)] px-7 py-3.5 text-sm font-medium tracking-wide hover:bg-[var(--cream)] hover:text-[var(--ink)] transition-all duration-300">
-      {children}
-    </button>
   );
 }
 
@@ -275,12 +274,12 @@ function SectionLabel({ kicker, title, sub }: { kicker: string; title: string; s
 
 function Categories() {
   return (
-    <section className="py-24 md:py-32 bg-[var(--cream)]">
+    <section id="featured-categories" className="py-24 md:py-32 bg-[var(--cream)]">
       <div className="mx-auto max-w-7xl px-6">
         <SectionLabel kicker="Shop by World" title="Featured Categories" sub="From classroom to boardroom to runway — a bag for every chapter." />
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
           {CATEGORIES.map((c, i) => (
-            <a key={c.name} href="#" className="group relative aspect-[4/5] overflow-hidden bg-background">
+            <Link key={c.name} to="/shop" search={{ category: c.slug }} className="group relative aspect-[4/5] overflow-hidden bg-background">
               <img src={c.img} alt={c.name} loading="lazy" width={900} height={1100}
                 className="absolute inset-0 h-full w-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-110" />
               <div className="absolute inset-0 bg-gradient-to-t from-[var(--ink)]/90 via-[var(--ink)]/10 to-transparent" />
@@ -293,7 +292,7 @@ function Categories() {
                   Shop now <ArrowRight className="h-3.5 w-3.5" />
                 </div>
               </div>
-            </a>
+            </Link>
           ))}
         </div>
       </div>
@@ -302,6 +301,12 @@ function Categories() {
 }
 
 function Bestsellers() {
+  const { products } = useStore();
+  const featured = [
+    ...products.filter((p) => p.isBestseller || p.isNew),
+    ...products.filter((p) => !p.isBestseller && !p.isNew),
+  ].slice(0, 4);
+
   return (
     <section className="py-24 md:py-32">
       <div className="mx-auto max-w-7xl px-6">
@@ -310,38 +315,47 @@ function Bestsellers() {
             <div className="text-[10px] tracking-[0.4em] uppercase text-[var(--gold-dark)] mb-3">The Edit</div>
             <h2 className="font-serif text-4xl md:text-5xl lg:text-6xl font-light max-w-xl">Best Sellers, hand-picked.</h2>
           </div>
-          <a href="#" className="hidden md:inline-flex items-center gap-2 text-sm font-medium border-b border-[var(--ink)] pb-1 hover:border-[var(--gold)] hover:text-[var(--gold-dark)] transition-colors">
+          <Link to="/shop" className="hidden md:inline-flex items-center gap-2 text-sm font-medium border-b border-[var(--ink)] pb-1 hover:border-[var(--gold)] hover:text-[var(--gold-dark)] transition-colors">
             View all <ArrowRight className="h-4 w-4" />
-          </a>
+          </Link>
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 md:gap-8">
-          {PRODUCTS.map((p) => <ProductCard key={p.name} p={p} />)}
+          {featured.map((p) => <ProductCard key={p.id} p={p} />)}
         </div>
       </div>
     </section>
   );
 }
 
-function ProductCard({ p }: { p: typeof PRODUCTS[number] }) {
-  const [wish, setWish] = useState(false);
+function ProductCard({ p }: { p: Product }) {
+  const { addToCart, toggleWishlist, isWished } = useStore();
+  const wish = isWished(p.id);
   return (
     <div className="group">
       <div className="relative aspect-[4/5] overflow-hidden bg-[var(--cream)]">
-        <img src={p.img} alt={p.name} loading="lazy" width={900} height={1100}
-          className="absolute inset-0 h-full w-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-105" />
-        <span className="absolute top-3 left-3 px-2.5 py-1 text-[10px] tracking-[0.2em] uppercase bg-[var(--ink)] text-[var(--cream)]">{p.badge}</span>
-        <button onClick={() => setWish(v => !v)} aria-label="Wishlist"
-          className="absolute top-3 right-3 grid place-items-center h-9 w-9 rounded-full bg-background/80 backdrop-blur hover:bg-background transition">
+        <Link to="/product/$slug" params={{ slug: p.slug }} aria-label={p.name} className="absolute inset-0 z-0 block">
+          <img src={p.images[0]} alt={p.name} loading="lazy" width={900} height={1100}
+            className="absolute inset-0 h-full w-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-105" />
+        </Link>
+        {p.badge && (
+          <span className="pointer-events-none absolute top-3 left-3 z-10 px-2.5 py-1 text-[10px] tracking-[0.2em] uppercase bg-[var(--ink)] text-[var(--cream)]">{p.badge}</span>
+        )}
+        <button onClick={() => toggleWishlist(p.id)} aria-label="Wishlist"
+          className="absolute top-3 right-3 z-10 grid place-items-center h-9 w-9 rounded-full bg-background/80 backdrop-blur hover:bg-background transition">
           <Heart className={`h-4 w-4 transition ${wish ? "fill-[var(--gold-dark)] text-[var(--gold-dark)]" : ""}`} />
         </button>
-        <div className="absolute inset-x-3 bottom-3 flex gap-2 translate-y-3 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500">
-          <button className="flex-1 bg-[var(--ink)] text-[var(--cream)] py-3 text-xs tracking-[0.2em] uppercase hover:bg-gradient-gold hover:text-[var(--ink)] transition-colors">
-            Add to bag
+        <div className="absolute inset-x-3 bottom-3 z-10 flex gap-2 translate-y-3 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500">
+          <button
+            onClick={() => { addToCart(p.id); toast.success("Added to bag", { description: p.name }); }}
+            disabled={p.stock <= 0}
+            className="flex-1 bg-[var(--ink)] text-[var(--cream)] py-3 text-xs tracking-[0.2em] uppercase hover:bg-gradient-gold hover:text-[var(--ink)] transition-colors disabled:opacity-50"
+          >
+            {p.stock <= 0 ? "Out of stock" : "Add to bag"}
           </button>
-          <button aria-label="Quick view" className="grid place-items-center h-11 w-11 bg-background hover:bg-gradient-gold transition-colors">
+          <Link to="/product/$slug" params={{ slug: p.slug }} aria-label="Quick view" className="grid place-items-center h-11 w-11 bg-background hover:bg-gradient-gold transition-colors">
             <Eye className="h-4 w-4" />
-          </button>
+          </Link>
         </div>
       </div>
       <div className="pt-4">
@@ -349,7 +363,7 @@ function ProductCard({ p }: { p: typeof PRODUCTS[number] }) {
           <Star className="h-3 w-3 fill-current" />
           <span className="text-[11px] tracking-wide">{p.rating}</span>
         </div>
-        <div className="font-serif text-lg leading-snug">{p.name}</div>
+        <Link to="/product/$slug" params={{ slug: p.slug }} className="font-serif text-lg leading-snug hover:text-[var(--gold-dark)] transition-colors block">{p.name}</Link>
         <div className="mt-1 flex items-baseline gap-2">
           <span className="font-medium">₹{p.price.toLocaleString("en-IN")}</span>
           {p.was && <span className="text-xs text-muted-foreground line-through">₹{p.was.toLocaleString("en-IN")}</span>}
@@ -371,7 +385,7 @@ function Collections() {
 
         <div className="grid md:grid-cols-2 gap-6 lg:gap-10">
           {COLLECTIONS.map((c, i) => (
-            <a key={c.title} href="#" className={`group relative overflow-hidden ${i % 3 === 0 ? "md:row-span-1" : ""} ${i === 1 ? "md:mt-16" : ""} ${i === 3 ? "md:-mt-16" : ""}`}>
+            <Link key={c.title} to="/shop" search={{ category: c.category }} className={`group relative overflow-hidden ${i % 3 === 0 ? "md:row-span-1" : ""} ${i === 1 ? "md:mt-16" : ""} ${i === 3 ? "md:-mt-16" : ""}`}>
               <div className="relative aspect-[4/5] overflow-hidden">
                 <img src={c.img} alt={c.title} loading="lazy" width={1200} height={1500}
                   className="absolute inset-0 h-full w-full object-cover transition-transform duration-[1400ms] ease-out group-hover:scale-110" />
@@ -385,7 +399,7 @@ function Collections() {
                   {c.cta} <ArrowRight className="h-4 w-4 text-[var(--gold-light)]" />
                 </div>
               </div>
-            </a>
+            </Link>
           ))}
         </div>
       </div>
@@ -521,14 +535,31 @@ function Instagram_() {
 }
 
 function Newsletter() {
+  const [email, setEmail] = useState("");
+  const onSubscribe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+    try {
+      await api.post("/contact", {
+        name: "Newsletter Subscriber",
+        email: email.trim(),
+        subject: "Newsletter Subscription",
+        message: `Newsletter signup from ${email.trim()}`,
+      });
+    } catch {
+      // Allow offline feedback without losing UX
+    }
+    toast.success("Welcome to the House — you're on the list.");
+    setEmail("");
+  };
   return (
     <section className="bg-[var(--cream)] py-20 md:py-28">
       <div className="mx-auto max-w-3xl px-6 text-center">
         <Plus className="h-5 w-5 mx-auto text-[var(--gold-dark)]" />
         <h2 className="font-serif text-3xl md:text-5xl font-light mt-6">Join the House.</h2>
         <p className="mt-4 text-muted-foreground">Be first to see new arrivals, signature drops and quiet members-only sales.</p>
-        <form className="mt-10 flex flex-col sm:flex-row gap-2 max-w-md mx-auto" onSubmit={(e) => e.preventDefault()}>
-          <input type="email" required placeholder="your@email.com"
+        <form className="mt-10 flex flex-col sm:flex-row gap-2 max-w-md mx-auto" onSubmit={onSubscribe}>
+          <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="your@email.com"
             className="flex-1 bg-background border border-border px-4 py-3.5 text-sm focus:outline-none focus:border-[var(--gold)] transition-colors" />
           <button className="bg-[var(--ink)] text-[var(--cream)] px-6 py-3.5 text-xs tracking-[0.2em] uppercase hover:bg-gradient-gold hover:text-[var(--ink)] transition-colors">
             Subscribe
@@ -540,10 +571,36 @@ function Newsletter() {
 }
 
 function Footer() {
-  const cols: { title: string; links: string[] }[] = [
-    { title: "Shop", links: ["Women", "Men", "Travel", "School & Kids", "Office", "Signature Series"] },
-    { title: "House", links: ["About Us", "Our Story", "Stores", "Contact"] },
-    { title: "Service", links: ["Shipping", "Returns", "Privacy Policy", "Terms & Conditions"] },
+  const cols: { title: string; links: { label: string; to: string; search?: Record<string, string> }[] }[] = [
+    {
+      title: "Shop",
+      links: [
+        { label: "Women", to: "/shop", search: { category: "handbags" } },
+        { label: "Men", to: "/shop", search: { category: "office" } },
+        { label: "Travel", to: "/shop", search: { category: "travel" } },
+        { label: "School & Kids", to: "/shop", search: { category: "school" } },
+        { label: "Office", to: "/shop", search: { category: "office" } },
+        { label: "Signature Series", to: "/shop", search: { category: "signature" } },
+      ],
+    },
+    {
+      title: "House",
+      links: [
+        { label: "About Us", to: "/about" },
+        { label: "Our Story", to: "/about" },
+        { label: "Track Order", to: "/track" },
+        { label: "Contact", to: "/contact" },
+      ],
+    },
+    {
+      title: "Service",
+      links: [
+        { label: "Shipping", to: "/policy/shipping" },
+        { label: "Returns", to: "/policy/returns" },
+        { label: "Privacy Policy", to: "/policy/privacy" },
+        { label: "Terms & Conditions", to: "/policy/terms" },
+      ],
+    },
   ];
   return (
     <footer className="bg-[var(--ink)] text-[var(--cream)] pt-20 pb-10">
@@ -580,11 +637,11 @@ function Footer() {
                 <div className="text-[10px] tracking-[0.4em] uppercase text-[var(--gold-light)] mb-5">{col.title}</div>
                 <ul className="space-y-3 text-sm">
                   {col.links.map(l => (
-                    <li key={l}>
-                      <a href="#" className="text-[var(--cream)]/75 hover:text-[var(--cream)] inline-flex items-center gap-1.5 group">
-                        {l}
+                    <li key={l.label}>
+                      <Link to={l.to as any} search={l.search as any} className="text-[var(--cream)]/75 hover:text-[var(--cream)] inline-flex items-center gap-1.5 group">
+                        {l.label}
                         <ChevronRight className="h-3 w-3 opacity-0 -ml-1 group-hover:opacity-100 group-hover:ml-0 transition-all" />
-                      </a>
+                      </Link>
                     </li>
                   ))}
                 </ul>

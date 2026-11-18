@@ -35,8 +35,8 @@ async function run() {
   console.log("╚══════════════════════════════════════════════════════════════╝\n");
 
   const login = await req("POST", "/admin/auth/login", {
-    email: "admin@trivenibombaybaghouse.com",
-    password: "Mahakali1432"
+    email: process.env.ADMIN_EMAIL || "admin@trivenibombaybaghouse.com",
+    password: process.env.ADMIN_PASSWORD || ""
   });
   const token = login.body?.data?.token || login.body?.token;
   test("Admin login for Wave 4 tests", !!token, `token=${token ? "OK" : "MISSING"}`);

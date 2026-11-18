@@ -269,8 +269,13 @@ export class OrderService {
 			);
 		}
 
-		// If Razorpay, create payment order
-		if (paymentMethod === PaymentMethod.RAZORPAY) {
+		// Online payment methods (RAZORPAY, CARD, UPI) require Razorpay order creation & server-side verification
+		const isOnlinePayment =
+			paymentMethod === PaymentMethod.RAZORPAY ||
+			paymentMethod === PaymentMethod.CARD ||
+			paymentMethod === PaymentMethod.UPI;
+
+		if (isOnlinePayment) {
 			const amountForRazorpay = totals.final_payable;
 			console.log(
 				`[OrderService] Creating Razorpay order for ₹${amountForRazorpay} (${Math.round(amountForRazorpay * 100)} paise)`,
@@ -298,23 +303,8 @@ export class OrderService {
 			return {
 				order,
 				razorpayOrder,
-				razorpayKeyId: process.env.RAZORPAY_KEY_ID,
+				razorpayKeyId: env.RAZORPAY_KEY_ID,
 			};
-		}
-
-		if (paymentMethod === PaymentMethod.CARD) {
-			await this.orderRepo.updatePaymentStatus(
-				order.id,
-				PaymentStatus.COMPLETED,
-			);
-			await this.updateOrderStatus(
-				order.id,
-				OrderStatus.PAYMENT_CONFIRMED,
-				"SYSTEM",
-			);
-			await this.updateOrderStatus(order.id, OrderStatus.PROCESSING, "SYSTEM");
-			await this.cartService.clearUserCart(userId);
-			return { order };
 		}
 
 		await this.orderRepo.updatePaymentStatus(order.id, PaymentStatus.PENDING);

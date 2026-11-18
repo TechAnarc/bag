@@ -6,6 +6,7 @@ import {
   Undo2, Settings, User, LogOut, Search, Bell, Sun, Moon, Plus, Menu, X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { API_BASE_URL } from "@/lib/axios";
 
 type NavItem = { to: string; label: string; icon: any; exact?: boolean };
 export const NAV: NavItem[] = [
@@ -34,7 +35,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [dark, setDark] = useState(false);
   const pathname = useRouterState({ select: (r) => r.location.pathname });
-  const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000/api/v1";
+  const API_BASE = API_BASE_URL;
 
   const signOut = async () => {
     const token = localStorage.getItem("admin_access_token");

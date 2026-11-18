@@ -1,7 +1,8 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { AdminShell } from "@/components/admin-shell";
+import { API_BASE_URL } from "@/lib/axios";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000/api/v1";
+const API_BASE = API_BASE_URL;
 
 /**
  * Wave 1 — Admin Route Guard

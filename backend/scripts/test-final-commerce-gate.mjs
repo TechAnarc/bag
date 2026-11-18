@@ -50,8 +50,8 @@ async function runGate() {
 
   console.log("── Phase 0: System Authentication & Catalog Inspection ──");
   const adminLogin = await req("POST", "/admin/auth/login", {
-    email: "admin@trivenibombaybaghouse.com",
-    password: "Mahakali1432",
+    email: process.env.ADMIN_EMAIL || "admin@trivenibombaybaghouse.com",
+    password: process.env.ADMIN_PASSWORD || "",
   });
   const adminToken = adminLogin.body?.data?.token || adminLogin.body?.token;
   record("Admin authentication", !!adminToken);

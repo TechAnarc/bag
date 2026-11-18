@@ -1,12 +1,12 @@
 import { Router } from "express";
 import { couponController } from "./coupon.controller";
 import { authenticateAdmin } from "../../middleware/adminAuth.middleware";
-import { authenticate } from "../../middleware/auth.middleware";
+import { optionalAuthenticate } from "../../middleware/auth.middleware";
 
 const router = Router();
 
-// Public: validate coupon (requires user auth)
-router.post("/validate", authenticate as any, (req, res) => couponController.validateCoupon(req as any, res));
+// Customer coupon validation (supports both authenticated users and guest carts)
+router.post("/validate", optionalAuthenticate as any, (req, res) => couponController.validateCoupon(req as any, res));
 
 // Admin: full CRUD (requires admin auth)
 router.use(authenticateAdmin);

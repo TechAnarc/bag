@@ -1,13 +1,40 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
-import { Check, ShieldCheck, Truck, CreditCard, Smartphone, Wallet, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Check, ShieldCheck, Truck, CreditCard, Smartphone, Wallet, Loader2, Tag } from "lucide-react";
 import { toast } from "sonner";
 import { SiteLayout } from "@/components/site-layout";
 import { inr } from "@/lib/catalog";
 import { useStore } from "@/lib/store";
 import api from "@/lib/axios";
 
+type CheckoutSearch = { couponCode?: string };
+
+declare global {
+  interface Window {
+    Razorpay?: new (options: Record<string, unknown>) => {
+      open: () => void;
+      on: (event: string, handler: (res: any) => void) => void;
+    };
+  }
+}
+
+function loadRazorpaySdk(): Promise<boolean> {
+  if (typeof window === "undefined") return Promise.resolve(false);
+  if (window.Razorpay) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    script.onload = () => resolve(Boolean(window.Razorpay));
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
+
 export const Route = createFileRoute("/checkout")({
+  validateSearch: (s: Record<string, unknown>): CheckoutSearch => ({
+    couponCode: typeof s.couponCode === "string" && s.couponCode.trim() ? s.couponCode.trim().toUpperCase() : undefined,
+  }),
   head: () => ({ meta: [{ title: "Checkout — Bombay Bag House" }] }),
   component: Checkout,
 });
@@ -15,13 +42,19 @@ export const Route = createFileRoute("/checkout")({
 const STEPS = ["Address", "Delivery", "Payment", "Review"] as const;
 
 function Checkout() {
-  const { cart, products, cartSubtotal, clearCart } = useStore();
+  const { cart, products, cartSubtotal, clearCart, refreshProducts } = useStore();
+  const search = Route.useSearch();
   const navigate = Route.useNavigate();
   const items = cart.map((c) => ({ ...c, product: products.find((p) => p.id === c.id)! })).filter((i) => i.product);
   const [step, setStep] = useState(0);
   const [slot, setSlot] = useState("Standard");
   const [method, setMethod] = useState<"card" | "upi" | "cod">("card");
   const [isPlacing, setIsPlacing] = useState(false);
+  const [couponCode] = useState<string | undefined>(search.couponCode);
+  const [discount, setDiscount] = useState(0);
+  const [freeShippingCoupon, setFreeShippingCoupon] = useState(false);
+  // Idempotency key to prevent double charges on duplicate submissions (must be declared before early returns)
+  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
 
   // Address state
   const [address, setAddress] = useState({
@@ -36,8 +69,29 @@ function Checkout() {
     country: "India",
   });
 
-  const shipping = cartSubtotal > 2499 ? 0 : 99;
-  const total = cartSubtotal + shipping;
+  useEffect(() => {
+    if (!couponCode || cartSubtotal <= 0) return;
+    api.post("/coupons/validate", { code: couponCode, itemTotal: cartSubtotal })
+      .then((res) => {
+        const d = res.data?.data;
+        if (d?.isFreeShipping) {
+          setFreeShippingCoupon(true);
+          setDiscount(0);
+        } else if (typeof d?.discountAmount === "number") {
+          setFreeShippingCoupon(false);
+          setDiscount(d.discountAmount);
+        }
+      })
+      .catch(() => {
+        setDiscount(0);
+        setFreeShippingCoupon(false);
+      });
+  }, [couponCode, cartSubtotal]);
+
+  const baseShipping = cartSubtotal > 2499 ? 0 : 99;
+  const slotCharge = slot === "Express" ? 199 : slot === "Same-Day" ? 399 : 0;
+  const shipping = (freeShippingCoupon ? 0 : baseShipping) + slotCharge;
+  const total = Math.max(0, cartSubtotal + shipping - discount);
 
   if (items.length === 0) {
     return (
@@ -50,8 +104,19 @@ function Checkout() {
     );
   }
 
-  // Idempotency key to prevent double charges on duplicate submissions
-  const [idempotencyKey] = useState(() => crypto.randomUUID());
+  const finalizeOrderSuccess = (order: any) => {
+    const orderNumber = order?.orderNumber || order?.id || "BBH";
+    clearCart();
+    refreshProducts();
+    toast.success("Order placed successfully!", {
+      description: `Confirmation #${orderNumber}. Thank you for choosing Bombay Bag House.`,
+    });
+    try {
+      const existing = JSON.parse(localStorage.getItem("bbh_recent_orders") || "[]");
+      localStorage.setItem("bbh_recent_orders", JSON.stringify([order, ...existing].slice(0, 10)));
+    } catch {}
+    navigate({ to: "/account" });
+  };
 
   const placeOrder = async () => {
     if (isPlacing) return;
@@ -60,8 +125,8 @@ function Checkout() {
     try {
       // Map payment method enum to backend Prisma PaymentMethod
       const paymentMethodMap: Record<string, string> = {
-        card: "CARD",
-        upi: "UPI",
+        card: "RAZORPAY",
+        upi: "RAZORPAY",
         cod: "COD",
       };
 
@@ -75,26 +140,67 @@ function Checkout() {
           quantity: i.qty,
         })),
         deliveryMethod: "SHIP",
+        couponCode,
         idempotencyKey,
       };
 
       const res = await api.post("/orders", payload);
       const data = res.data?.data;
       const order = data?.order || data;
-      const orderNumber = order?.orderNumber || "BBH" + Math.random().toString(36).slice(2, 8).toUpperCase();
+      const razorpayOrder = data?.razorpayOrder;
+      const razorpayKeyId = data?.razorpayKeyId;
 
-      clearCart();
-      toast.success("Order placed successfully!", {
-        description: `Confirmation #${orderNumber}. Thank you for choosing Bombay Bag House.`,
-      });
+      if (method !== "cod") {
+        if (!razorpayOrder?.id || !razorpayKeyId) {
+          setIdempotencyKey(crypto.randomUUID());
+          throw new Error("Online payment gateway is not configured yet. Please select Cash on Delivery or configure Razorpay test keys.");
+        }
+        const loaded = await loadRazorpaySdk();
+        if (!loaded || !window.Razorpay) {
+          throw new Error("Unable to load Razorpay payment gateway. Please check your connection and try again.");
+        }
+        await new Promise<void>((resolve, reject) => {
+          const rzp = new window.Razorpay!({
+            key: razorpayKeyId,
+            amount: razorpayOrder.amount,
+            currency: razorpayOrder.currency || "INR",
+            name: "Triveni Bombay Bag House",
+            description: `Order #${order?.orderNumber || order?.id}`,
+            order_id: razorpayOrder.id,
+            prefill: {
+              name: address.fullName,
+              email: address.email,
+              contact: address.mobile,
+            },
+            theme: { color: "#D4AF37" },
+            modal: {
+              ondismiss: () => reject(new Error("Payment was cancelled before completion.")),
+            },
+            handler: async (paymentRes: any) => {
+              try {
+                const verifyRes = await api.post("/orders/verify-payment", {
+                  orderId: order.id,
+                  razorpay_order_id: paymentRes.razorpay_order_id,
+                  razorpay_payment_id: paymentRes.razorpay_payment_id,
+                  razorpay_signature: paymentRes.razorpay_signature,
+                });
+                const verifiedOrder = verifyRes.data?.data?.order || order;
+                finalizeOrderSuccess(verifiedOrder);
+                resolve();
+              } catch (verifyErr: any) {
+                reject(new Error(verifyErr.response?.data?.message || "Server-side payment signature verification failed."));
+              }
+            },
+          });
+          rzp.on("payment.failed", (failRes: any) => {
+            reject(new Error(failRes?.error?.description || "Payment declined by bank/gateway."));
+          });
+          rzp.open();
+        });
+        return;
+      }
 
-      // Save last order for account page hydration
-      try {
-        const existing = JSON.parse(localStorage.getItem("bbh_recent_orders") || "[]");
-        localStorage.setItem("bbh_recent_orders", JSON.stringify([order, ...existing].slice(0, 10)));
-      } catch {}
-
-      navigate({ to: "/account" });
+      finalizeOrderSuccess(order);
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || "Failed to place order";
       toast.error("Checkout failed", { description: msg });
@@ -227,6 +333,12 @@ function Checkout() {
             <div className="mt-4 space-y-1.5 border-t border-border pt-4 text-sm">
               <div className="flex justify-between text-muted-foreground"><span>Subtotal</span><span>{inr(cartSubtotal)}</span></div>
               <div className="flex justify-between text-muted-foreground"><span>Shipping</span><span>{shipping === 0 ? "Free" : inr(shipping)}</span></div>
+              {discount > 0 && (
+                <div className="flex justify-between text-gold-dark font-medium">
+                  <span className="inline-flex items-center gap-1"><Tag className="size-3.5" /> {couponCode}</span>
+                  <span>- {inr(discount)}</span>
+                </div>
+              )}
               <div className="mt-2 flex justify-between border-t border-border pt-2 font-semibold"><span>Total</span><span>{inr(total)}</span></div>
             </div>
             <div className="mt-5 grid grid-cols-2 gap-2 text-[11px] text-muted-foreground">

@@ -6,6 +6,8 @@ type CartItem = { id: string; qty: number };
 
 type StoreCtx = {
   products: Product[];
+  catalogSource: "backend" | "seed";
+  isLoadingProducts: boolean;
   refreshProducts: () => void;
   cart: CartItem[];
   addToCart: (id: string, qty?: number) => void;
@@ -46,23 +48,40 @@ const useLocal = <T,>(key: string, initial: T): [T, (v: T | ((p: T) => T)) => vo
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [products, setProducts] = useState<Product[]>(() => loadProducts());
+  const [catalogSource, setCatalogSource] = useState<"backend" | "seed">("seed");
+  const [isLoadingProducts, setIsLoadingProducts] = useState<boolean>(false);
   const [cart, setCart] = useLocal<CartItem[]>("tbh_cart_v1", []);
   const [wishlist, setWishlist] = useLocal<string[]>("tbh_wishlist_v1", []);
   const [recent, setRecent] = useLocal<string[]>("tbh_recent_v1", []);
 
   const refreshProducts = useCallback(async () => {
+    setIsLoadingProducts(true);
     try {
       const res = await api.get("/products?limit=100");
-      const backendList = res.data?.data?.products || [];
+      const backendList = res.data?.data?.products ?? res.data?.products;
       if (Array.isArray(backendList) && backendList.length > 0) {
-        const adapted = backendList.map(adaptBackendProduct);
-        setProducts(adapted);
-        return;
+        const adapted = backendList
+          .map(adaptBackendProduct)
+          .filter(
+            (p) =>
+              p.status !== "INACTIVE" &&
+              p.status !== "ARCHIVED" &&
+              !String(p.sku || "").startsWith("SKU-LOAD-") &&
+              !String(p.slug || "").startsWith("load-test-"),
+          );
+        if (adapted.length > 0) {
+          setProducts(adapted);
+          setCatalogSource("backend");
+          return;
+        }
       }
     } catch {
-      // Graceful fallback to local catalog
+      // Graceful fallback to local catalog only when backend is unreachable
+    } finally {
+      setIsLoadingProducts(false);
     }
     setProducts(loadProducts());
+    setCatalogSource("seed");
   }, []);
 
   useEffect(() => {
@@ -118,7 +137,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   );
 
   const value: StoreCtx = {
-    products, refreshProducts,
+    products, catalogSource, isLoadingProducts, refreshProducts,
     cart, addToCart, removeFromCart, setQty, clearCart, cartCount, cartSubtotal,
     wishlist, toggleWishlist, isWished,
     recent, pushRecent,

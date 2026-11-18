@@ -1,0 +1,3 @@
+# Node 22 provides node, npm, and npx; bun is intentionally excluded.
+[tools]
+node = "22"

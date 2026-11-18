@@ -1045,9 +1045,8 @@ function LuxuryProductCard({ product }: { product: Product }) {
 
   return (
     <div className="group relative">
-      <Link to="/product/$slug" params={{ slug: product.slug }} className="block">
-        <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-muted ring-1 ring-transparent transition-all duration-500 group-hover:-translate-y-1 group-hover:ring-gold/60 group-hover:shadow-[0_30px_60px_-25px_oklch(0_0_0/0.35)]">
-          {/* Images */}
+      <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-muted ring-1 ring-transparent transition-all duration-500 group-hover:-translate-y-1 group-hover:ring-gold/60 group-hover:shadow-[0_30px_60px_-25px_oklch(0_0_0/0.35)]">
+        <Link to="/product/$slug" params={{ slug: product.slug }} aria-label={product.name} className="absolute inset-0 z-0 block">
           <img
             src={product.images[0]}
             alt={product.name}
@@ -1060,58 +1059,61 @@ function LuxuryProductCard({ product }: { product: Product }) {
             loading="lazy"
             className="absolute inset-0 size-full scale-110 object-cover opacity-0 transition-all duration-700 group-hover:scale-100 group-hover:opacity-100"
           />
+        </Link>
 
-          {/* Badges */}
-          <div className="absolute left-3 top-3 flex flex-col gap-1.5">
-            {product.badge && (
-              <span className="rounded-full bg-ink/90 px-3 py-1 text-[10px] uppercase tracking-widest text-cream backdrop-blur">
-                {product.badge}
-              </span>
-            )}
-            {discount > 0 && (
-              <span className="rounded-full bg-gradient-gold px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-ink">
-                -{discount}%
-              </span>
-            )}
-          </div>
+        {/* Badges */}
+        <div className="pointer-events-none absolute left-3 top-3 z-10 flex flex-col gap-1.5">
+          {product.badge && (
+            <span className="rounded-full bg-ink/90 px-3 py-1 text-[10px] uppercase tracking-widest text-cream backdrop-blur">
+              {product.badge}
+            </span>
+          )}
+          {discount > 0 && (
+            <span className="rounded-full bg-gradient-gold px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-ink">
+              -{discount}%
+            </span>
+          )}
+        </div>
 
-          {/* Side actions */}
-          <div className="absolute right-3 top-3 flex flex-col gap-2 opacity-0 transition-all duration-500 translate-x-2 group-hover:opacity-100 group-hover:translate-x-0">
-            <button
-              onClick={(e) => { e.preventDefault(); toggleWishlist(product.id); toast.success(wished ? "Removed from wishlist" : "Added to wishlist"); }}
-              aria-label="Wishlist"
-              className={`grid size-9 place-items-center rounded-full backdrop-blur shadow transition ${wished ? "bg-gold text-ink" : "bg-cream/90 text-ink hover:bg-gold hover:text-ink"}`}
-            ><Heart className={`size-4 ${wished ? "fill-current" : ""}`} /></button>
-            <Link
-              to="/product/$slug" params={{ slug: product.slug }}
-              aria-label="Quick view"
-              className="grid size-9 place-items-center rounded-full bg-cream/90 text-ink shadow backdrop-blur transition hover:bg-gold"
-            ><Eye className="size-4" /></Link>
-            <button
-              onClick={(e) => { e.preventDefault(); toast.message("Added to compare", { description: product.name }); }}
-              aria-label="Compare"
-              className="grid size-9 place-items-center rounded-full bg-cream/90 text-ink shadow backdrop-blur transition hover:bg-gold"
-            ><GitCompareArrows className="size-4" /></button>
-          </div>
+        {/* Side actions */}
+        <div className="absolute right-3 top-3 z-10 flex flex-col gap-2 opacity-0 transition-all duration-500 translate-x-2 group-hover:opacity-100 group-hover:translate-x-0">
+          <button
+            onClick={() => { toggleWishlist(product.id); toast.success(wished ? "Removed from wishlist" : "Added to wishlist"); }}
+            aria-label="Wishlist"
+            className={`grid size-9 place-items-center rounded-full backdrop-blur shadow transition ${wished ? "bg-gold text-ink" : "bg-cream/90 text-ink hover:bg-gold hover:text-ink"}`}
+          ><Heart className={`size-4 ${wished ? "fill-current" : ""}`} /></button>
+          <Link
+            to="/product/$slug" params={{ slug: product.slug }}
+            aria-label="Quick view"
+            className="grid size-9 place-items-center rounded-full bg-cream/90 text-ink shadow backdrop-blur transition hover:bg-gold"
+          ><Eye className="size-4" /></Link>
+          <button
+            onClick={() => toast.message("Added to compare", { description: product.name })}
+            aria-label="Compare"
+            className="grid size-9 place-items-center rounded-full bg-cream/90 text-ink shadow backdrop-blur transition hover:bg-gold"
+          ><GitCompareArrows className="size-4" /></button>
+        </div>
 
-          {/* Bottom action bar */}
-          <div className="absolute inset-x-3 bottom-3 flex translate-y-4 gap-2 opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100">
-            <button
-              onClick={(e) => { e.preventDefault(); addToCart(product.id); toast.success("Added to bag", { description: product.name }); }}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-cream/95 py-2.5 text-xs font-semibold uppercase tracking-widest text-ink backdrop-blur transition hover:bg-cream"
-            >
-              <ShoppingBag className="size-3.5" /> Add
-            </button>
+        {/* Bottom action bar */}
+        <div className="absolute inset-x-3 bottom-3 z-10 flex translate-y-4 gap-2 opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100">
+          <button
+            onClick={() => { addToCart(product.id); toast.success("Added to bag", { description: product.name }); }}
+            disabled={product.stock <= 0}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-cream/95 py-2.5 text-xs font-semibold uppercase tracking-widest text-ink backdrop-blur transition hover:bg-cream disabled:opacity-50"
+          >
+            <ShoppingBag className="size-3.5" /> {product.stock <= 0 ? "Sold Out" : "Add"}
+          </button>
+          {product.stock > 0 && (
             <Link
               to="/checkout"
-              onClick={(e) => { e.stopPropagation(); addToCart(product.id); }}
+              onClick={() => addToCart(product.id)}
               className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-ink py-2.5 text-xs font-semibold uppercase tracking-widest text-cream transition hover:bg-ink/90"
             >
               Buy Now
             </Link>
-          </div>
+          )}
         </div>
-      </Link>
+      </div>
 
       {/* Meta */}
       <div className="mt-3.5 px-1">

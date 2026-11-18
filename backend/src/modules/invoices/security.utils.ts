@@ -5,6 +5,7 @@
 
 import crypto from "node:crypto";
 import QRCode from "qrcode";
+import { env } from "../../config/env";
 
 /**
  * Generate SHA-256 hash of invoice data for tamper detection
@@ -46,7 +47,7 @@ export function verifyInvoiceHash(
  */
 export async function generateVerificationQR(
 	invoiceId: string,
-	baseUrl: string = "https://bombaybaghouse.onrender.com",
+	baseUrl: string = "https://bag-azlo.onrender.com",
 ): Promise<string> {
 	const verificationUrl = `${baseUrl}/verify-invoice/${invoiceId}`;
 
@@ -117,8 +118,11 @@ export function generateSecureToken(length: number = 32): string {
  */
 export function signInvoiceData(
 	data: string,
-	secret: string = process.env.JWT_ACCESS_SECRET || "default-secret",
+	secret: string = env.JWT_ACCESS_SECRET,
 ): string {
+	if (!secret) {
+		throw new Error("Invoice signing secret is not configured");
+	}
 	return crypto.createHmac("sha256", secret).update(data).digest("hex");
 }
 
@@ -128,11 +132,11 @@ export function signInvoiceData(
 export function verifyInvoiceSignature(
 	data: string,
 	signature: string,
-	secret: string = process.env.JWT_ACCESS_SECRET || "default-secret",
+	secret: string = env.JWT_ACCESS_SECRET,
 ): boolean {
 	const expectedSignature = signInvoiceData(data, secret);
-	return crypto.timingSafeEqual(
-		Buffer.from(signature),
-		Buffer.from(expectedSignature),
-	);
+	const sigBuf = Buffer.from(signature, "utf8");
+	const expBuf = Buffer.from(expectedSignature, "utf8");
+	if (sigBuf.length !== expBuf.length) return false;
+	return crypto.timingSafeEqual(sigBuf, expBuf);
 }

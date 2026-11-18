@@ -1,0 +1,10 @@
+{
+  "description": "No end-user app functionality is specified; this project focuses on initial import setup and verifying deployment and preview readiness for developers.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

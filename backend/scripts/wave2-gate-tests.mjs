@@ -37,8 +37,8 @@ async function run() {
 
   // Login first
   const login = await req("POST", "/admin/auth/login", {
-    email: "admin@trivenibombaybaghouse.com",
-    password: "Mahakali1432"
+    email: process.env.ADMIN_EMAIL || "admin@trivenibombaybaghouse.com",
+    password: process.env.ADMIN_PASSWORD || ""
   });
   token = login.body?.data?.token || login.body?.token;
   test("Admin login for Wave 2 tests", !!token, `token=${token ? "OK" : "MISSING"}`);

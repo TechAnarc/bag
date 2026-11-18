@@ -10,8 +10,11 @@ async function createSuperAdmin() {
 	try {
 		console.log("🔧 Creating Super Admin...");
 
-		const email = process.env.ADMIN_EMAIL || "mahakal.mahakali014@gmail.com";
-		const password = process.env.ADMIN_PASSWORD || "Kali@0786";
+		const email = process.env.ADMIN_EMAIL;
+		const password = process.env.ADMIN_PASSWORD;
+		if (!email || !password) {
+			throw new Error("ADMIN_EMAIL and ADMIN_PASSWORD environment variables are required");
+		}
 		const name = process.env.ADMIN_NAME || "Super Admin";
 		const role =
 			(process.env.ADMIN_ROLE as "SUPER_ADMIN" | "ADMIN") || "SUPER_ADMIN";
@@ -45,9 +48,6 @@ async function createSuperAdmin() {
 		console.log(`📧 Email: ${admin.email}`);
 		console.log(`👤 Name: ${admin.name}`);
 		console.log(`🔐 Role: ${admin.role}`);
-		console.log(`\n⚠️  IMPORTANT: Store these credentials safely!`);
-		console.log(`Email: ${email}`);
-		console.log(`Password: ${password}`);
 	} catch (error) {
 		console.error("❌ Error creating Super Admin:", error);
 		throw error;

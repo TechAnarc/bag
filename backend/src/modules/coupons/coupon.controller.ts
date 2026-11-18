@@ -99,11 +99,10 @@ export class CouponController {
     } catch (e: any) { return sendError(res, e.message, 400); }
   }
 
-  /** Public endpoint - validate coupon for current user cart */
+  /** Public endpoint - validate coupon for current user or guest cart */
   async validateCoupon(req: AuthRequest, res: Response) {
     try {
-      const userId = req.auth?.id;
-      if (!userId) return sendError(res, "Authentication required", 401);
+      const userId = req.auth?.id || "";
       const parsed = validateCouponSchema.safeParse(req.body);
       if (!parsed.success) return sendError(res, parsed.error.errors.map(e => e.message).join(", "), 400);
       const result = await couponService.validateCoupon(parsed.data.code, userId, parsed.data.itemTotal);

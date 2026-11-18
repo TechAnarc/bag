@@ -40,13 +40,28 @@ export const validateRazorpayOrderId = (orderId: string): void => {
 // PaymentService
 // ---------------------------------------------------------------------------
 export class PaymentService {
-	private razorpay: Razorpay;
+	private razorpay: Razorpay | null = null;
 
 	constructor() {
-		this.razorpay = new Razorpay({
-			key_id: env.RAZORPAY_KEY_ID || "",
-			key_secret: env.RAZORPAY_KEY_SECRET || "",
-		});
+		if (env.RAZORPAY_KEY_ID && env.RAZORPAY_KEY_SECRET) {
+			this.razorpay = new Razorpay({
+				key_id: env.RAZORPAY_KEY_ID,
+				key_secret: env.RAZORPAY_KEY_SECRET,
+			});
+		}
+	}
+
+	private getClient(): Razorpay {
+		if (!this.razorpay) {
+			if (!env.RAZORPAY_KEY_ID || !env.RAZORPAY_KEY_SECRET) {
+				throw new Error("Razorpay credentials are not configured");
+			}
+			this.razorpay = new Razorpay({
+				key_id: env.RAZORPAY_KEY_ID,
+				key_secret: env.RAZORPAY_KEY_SECRET,
+			});
+		}
+		return this.razorpay;
 	}
 
 	// ─── Create Razorpay order ───────────────────────────────────────────────
@@ -67,7 +82,7 @@ export class PaymentService {
 				payment_capture: 1 as 1, // auto-capture
 			};
 
-			const order = await this.razorpay.orders.create(options);
+			const order = await this.getClient().orders.create(options);
 			logger.info(`[Payment] Razorpay order created: ${order.id} ₹${amount}`);
 			return order;
 		} catch (error: any) {
@@ -106,14 +121,20 @@ export class PaymentService {
 		signature: string,
 	): boolean {
 		try {
+			const secret = env.RAZORPAY_KEY_SECRET;
+			if (!secret || !razorpayOrderId || !razorpayPaymentId || !signature) {
+				logger.warn("[Payment] Missing secret or verification fields during signature check");
+				return false;
+			}
 			const text = `${razorpayOrderId}|${razorpayPaymentId}`;
-			const secret = env.RAZORPAY_KEY_SECRET || "";
 			const generated = crypto
 				.createHmac("sha256", secret)
 				.update(text)
 				.digest("hex");
 
-			const isValid = generated === signature;
+			const genBuf = Buffer.from(generated, "utf8");
+			const sigBuf = Buffer.from(signature, "utf8");
+			const isValid = genBuf.length === sigBuf.length && crypto.timingSafeEqual(genBuf, sigBuf);
 			if (!isValid) {
 				logger.warn(
 					`[Payment] Signature mismatch for order ${razorpayOrderId}`,
@@ -129,13 +150,19 @@ export class PaymentService {
 	// ─── Verify incoming webhook signature (spec §3.4) ───────────────────────
 	verifyWebhookSignature(rawBody: string, incomingSignature: string): boolean {
 		try {
-			const secret = env.RAZORPAY_WEBHOOK_SECRET || "";
+			const secret = env.RAZORPAY_WEBHOOK_SECRET;
+			if (!secret || !rawBody || !incomingSignature) {
+				logger.warn("[Webhook] Missing webhook secret, rawBody, or signature header");
+				return false;
+			}
 			const generated = crypto
 				.createHmac("sha256", secret)
 				.update(rawBody)
 				.digest("hex");
 
-			return generated === incomingSignature;
+			const genBuf = Buffer.from(generated, "utf8");
+			const sigBuf = Buffer.from(incomingSignature, "utf8");
+			return genBuf.length === sigBuf.length && crypto.timingSafeEqual(genBuf, sigBuf);
 		} catch {
 			return false;
 		}
@@ -144,7 +171,7 @@ export class PaymentService {
 	// ─── Fetch payment details from Razorpay ─────────────────────────────────
 	async getPaymentDetails(paymentId: string) {
 		try {
-			const payment = await this.razorpay.payments.fetch(paymentId);
+			const payment = await this.getClient().payments.fetch(paymentId);
 			return {
 				id: payment.id,
 				amount: (payment.amount as number) / 100, // paise → INR
@@ -170,7 +197,7 @@ export class PaymentService {
 				refundData.amount = Math.round(amount * 100);
 			}
 
-			const refund = await this.razorpay.payments.refund(paymentId, refundData);
+			const refund = await this.getClient().payments.refund(paymentId, refundData);
 			logger.info(
 				`[Payment] Refund created: ${refund.id} for payment ${paymentId}`,
 			);

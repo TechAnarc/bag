@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { OrderController } from "./order.controller";
-import { authenticate, optionalAuthenticate, authorize } from "../../middleware/auth.middleware";
-import { Role } from "@prisma/client";
+import { authenticate, optionalAuthenticate } from "../../middleware/auth.middleware";
+import { authenticateAdmin } from "../../middleware/adminAuth.middleware";
 
 const router = Router();
 const orderController = new OrderController();
@@ -28,13 +28,13 @@ router.get("/:id", authenticate, (req, res) =>
 );
 
 // Admin routes
-router.get("/", authorize(Role.ADMIN), (req, res) =>
+router.get("/", authenticateAdmin, (req, res) =>
 	orderController.getAllOrders(req, res),
 );
-router.patch("/:id/status", authorize(Role.ADMIN), (req, res) =>
+router.patch("/:id/status", authenticateAdmin, (req, res) =>
 	orderController.updateOrderStatus(req, res),
 );
-router.patch("/:id/details", authorize(Role.ADMIN), (req, res) =>
+router.patch("/:id/details", authenticateAdmin, (req, res) =>
 	orderController.updateOrderDetails(req, res),
 );
 

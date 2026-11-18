@@ -1,10 +1,10 @@
 import { Router } from "express";
 import { profileController } from "./profile.controller";
-// import { authenticate } from '../../../middleware/auth.middleware';
+import { authenticate } from "../../../middleware/auth.middleware";
 
 const router = Router();
 
-// router.use(authenticate); // Applied to all profile routes
+router.use(authenticate); // Applied to all profile routes
 
 /**
  * @route GET /api/v1/profile/me

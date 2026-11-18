@@ -2,13 +2,14 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Loader2, Lock } from "lucide-react";
+import { API_BASE_URL } from "@/lib/axios";
 
 export const Route = createFileRoute("/admin-signin")({
   head: () => ({ meta: [{ title: "Admin Sign In · TBH" }] }),
   component: SignIn,
 });
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000/api/v1";
+const API_BASE = API_BASE_URL;
 
 /**
  * Wave 1 — Admin Sign-In

@@ -32,6 +32,7 @@ import {
 	authenticate,
 	optionalAuthenticate,
 } from "../../middleware/auth.middleware";
+import { authenticateAdmin } from "../../middleware/adminAuth.middleware";
 
 const upisRouter = Router();
 
@@ -69,7 +70,7 @@ upisRouter.post("/trace", optionalAuthenticate, (req: any, res) => {
 });
 
 // Register Main Routes
-upisRouter.use("/profile", profileRoutes);
-upisRouter.use("/admin/upis", adminRoutes);
+upisRouter.use("/profile", authenticate, profileRoutes);
+upisRouter.use("/admin/upis", authenticateAdmin, adminRoutes);
 
 export { upisRouter, initializeUPIS };

@@ -1,7 +1,13 @@
 const { Client } = require("pg");
+require("dotenv").config();
+
+if (!process.env.DATABASE_URL) {
+	console.error("❌ DATABASE_URL environment variable is required");
+	process.exit(1);
+}
+
 const client = new Client({
-	connectionString:
-		"postgresql://postgres:supabaseisgood@db.obndverrhnewlcapkxam.supabase.co:5432/postgres",
+	connectionString: process.env.DATABASE_URL,
 });
 
 async function test() {

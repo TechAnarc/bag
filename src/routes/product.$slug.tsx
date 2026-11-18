@@ -65,6 +65,7 @@ function PDP() {
   if (!product) return null;
   const wished = isWished(product.id);
   const stockLabel = product.stock > 10 ? "In Stock" : product.stock > 0 ? `Only ${product.stock} left` : "Out of Stock";
+  const soldLast24h = (Array.from(String(product.id)).reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % 18) + 7;
 
   return (
     <SiteLayout>
@@ -94,7 +95,7 @@ function PDP() {
           <div className="mt-3 flex items-center gap-3 text-sm">
             <span className="flex items-center gap-1"><Star className="size-4 fill-gold text-gold" /> {product.rating}</span>
             <span className="text-muted-foreground">· {product.reviewCount} reviews</span>
-            <span className="text-muted-foreground">· SKU {product.id.toUpperCase()}</span>
+            <span className="text-muted-foreground">· SKU {(product.sku || product.id).toUpperCase()}</span>
           </div>
 
           <div className="mt-6 flex items-baseline gap-3">
@@ -121,21 +122,26 @@ function PDP() {
             <div className="flex items-center rounded-full border border-border">
               <button onClick={() => setQty(Math.max(1, qty - 1))} className="grid size-10 place-items-center"><Minus className="size-4" /></button>
               <span className="w-10 text-center text-sm font-medium">{qty}</span>
-              <button onClick={() => setQty(qty + 1)} className="grid size-10 place-items-center"><Plus className="size-4" /></button>
+              <button onClick={() => setQty(Math.min(Math.max(1, product.stock), qty + 1))} className="grid size-10 place-items-center"><Plus className="size-4" /></button>
             </div>
-            <p className="text-xs text-muted-foreground">{Math.floor(Math.random() * 18) + 7} sold in last 24h</p>
+            <p className="text-xs text-muted-foreground">{soldLast24h} sold in last 24h</p>
           </div>
 
           <div className="mt-5 grid grid-cols-2 gap-3">
             <button
               onClick={() => { addToCart(product.id, qty); toast.success("Added to bag", { description: product.name }); }}
-              className="flex items-center justify-center gap-2 rounded-full bg-ink py-3.5 text-xs uppercase tracking-widest text-cream hover:bg-ink/90"
-            ><ShoppingBag className="size-4" /> Add to Bag</button>
-            <Link
-              to="/checkout"
-              onClick={() => addToCart(product.id, qty)}
-              className="flex items-center justify-center rounded-full bg-gradient-gold py-3.5 text-xs uppercase tracking-widest text-ink hover:opacity-90"
-            >Buy Now</Link>
+              disabled={product.stock <= 0}
+              className="flex items-center justify-center gap-2 rounded-full bg-ink py-3.5 text-xs uppercase tracking-widest text-cream hover:bg-ink/90 disabled:opacity-50"
+            ><ShoppingBag className="size-4" /> {product.stock <= 0 ? "Out of Stock" : "Add to Bag"}</button>
+            {product.stock > 0 ? (
+              <Link
+                to="/checkout"
+                onClick={() => addToCart(product.id, qty)}
+                className="flex items-center justify-center rounded-full bg-gradient-gold py-3.5 text-xs uppercase tracking-widest text-ink hover:opacity-90"
+              >Buy Now</Link>
+            ) : (
+              <span className="flex items-center justify-center rounded-full border border-border py-3.5 text-xs uppercase tracking-widest text-muted-foreground">Unavailable</span>
+            )}
           </div>
           <div className="mt-3 flex gap-3">
             <button
@@ -175,9 +181,18 @@ function PDP() {
               <li><b className="text-foreground">Material:</b> {product.material}</li>
               <li><b className="text-foreground">Color:</b> {product.color}</li>
               <li><b className="text-foreground">Size:</b> {product.size}</li>
+              {product.capacity && <li><b className="text-foreground">Capacity:</b> {product.capacity}</li>}
+              {product.dimensions && <li><b className="text-foreground">Dimensions:</b> {product.dimensions}</li>}
+              {product.weight && <li><b className="text-foreground">Weight:</b> {product.weight}</li>}
+              {product.compartments !== undefined && <li><b className="text-foreground">Compartments:</b> {product.compartments}</li>}
+              {product.closureType && <li><b className="text-foreground">Closure:</b> {product.closureType}</li>}
+              {product.strapType && <li><b className="text-foreground">Strap:</b> {product.strapType}</li>}
+              {product.laptopCompatible !== undefined && <li><b className="text-foreground">Laptop Compatible:</b> {product.laptopCompatible ? "Yes" : "No"}</li>}
+              {product.waterResistant !== undefined && <li><b className="text-foreground">Water Resistant:</b> {product.waterResistant ? "Yes" : "No"}</li>}
               <li><b className="text-foreground">Gender:</b> <span className="capitalize">{product.gender}</span></li>
               <li><b className="text-foreground">Warranty:</b> 1 Year manufacturer</li>
-              <li><b className="text-foreground">SKU:</b> {product.id.toUpperCase()}</li>
+              <li><b className="text-foreground">SKU:</b> {(product.sku || product.id).toUpperCase()}</li>
+              {product.careInstructions && <li className="col-span-2 mt-2"><b className="text-foreground">Care:</b> {product.careInstructions}</li>}
             </ul>
           )}
           {tab === "reviews" && (

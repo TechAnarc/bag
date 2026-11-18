@@ -7,7 +7,7 @@ This is a very large scope (18+ admin sections, real database, auth, analytics, 
 1. **Enable Lovable Cloud** (Postgres + Auth + Storage).
 2. **Auth**
    - Email/password login at `/admin/login`.
-   - Seed the admin user `trivenibag@gmail.com` / `Kali@0786`.
+   - Seed the admin user `trivenibag@gmail.com` / `<YOUR_SECURE_ADMIN_PASSWORD>`.
    - `user_roles` table + `has_role()` security-definer function (admin/manager/staff).
    - Protected `_authenticated/admin` route subtree; non-admins bounced to `/`.
 3. **Core schema (migration with GRANTs + RLS):**

@@ -60,7 +60,7 @@ export class CouponService {
     if (itemTotal < coupon.minOrderValue) return { valid: false, reason: `Minimum order value of Rs.${Math.ceil(coupon.minOrderValue)} required` };
     if (coupon.usageLimit !== null && coupon.usedCount >= coupon.usageLimit) return { valid: false, reason: "This coupon has reached its usage limit" };
 
-    if (coupon.perCustomerLimit !== null) {
+    if (coupon.perCustomerLimit !== null && userId) {
       const userUsageCount = await prisma.couponUsage.count({ where: { couponId: coupon.id, userId } });
       if (userUsageCount >= coupon.perCustomerLimit) return { valid: false, reason: `You have already used this coupon the maximum number of times (${coupon.perCustomerLimit})` };
     }

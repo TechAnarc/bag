@@ -110,6 +110,7 @@ app.use(
 						"https://trivenibombaybaghouse.vercel.app",
 						"https://trivenibombaybaghouse.onrender.com",
 						"https://bombaybaghouse.onrender.com",
+						"https://bag-azlo.onrender.com",
 						"https://bombaybaghouse.vercel.app",
 					]),
 				);
@@ -119,7 +120,7 @@ app.use(
 				);
 				const isVercel =
 					cleanOrigin.startsWith("https://") &&
-					cleanOrigin.endsWith(".vercel.app");
+					(cleanOrigin.endsWith(".vercel.app") || cleanOrigin.endsWith(".figma.site"));
 
 				if (isAllowed || isVercel) {
 					return callback(null, true);

@@ -1,8 +1,13 @@
 const axios = require("axios");
+require("dotenv").config();
 
 async function testLogin() {
-	const email = "mahakal.mahakali014@gmail.com";
-	const password = "Kali@0786";
+	const email = process.env.ADMIN_EMAIL;
+	const password = process.env.ADMIN_PASSWORD;
+	if (!email || !password) {
+		console.error("ADMIN_EMAIL and ADMIN_PASSWORD environment variables are required");
+		process.exit(1);
+	}
 	const url = "http://localhost:4000/api/v1/admin/auth/login";
 
 	console.log(`Testing login to ${url}...`);

@@ -10,6 +10,7 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
+import logoUrl from "../assets/logo-tbh.png?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { StoreProvider } from "../lib/store";
 import { Toaster } from "sonner";
@@ -92,6 +93,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/fcd23bd1-ce1b-45b0-9d46-8e0238609e31" },
     ],
     links: [
+      { rel: "icon", type: "image/png", href: logoUrl },
       { rel: "stylesheet", href: appCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },

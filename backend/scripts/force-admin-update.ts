@@ -7,8 +7,12 @@ async function main() {
 	dotenv.config({ path: path.join(__dirname, "../.env") });
 	const prisma = new PrismaClient();
 
-	const email = process.env.ADMIN_EMAIL || "mahakal.mahakali014@gmail.com";
-	const password = process.env.ADMIN_PASSWORD || "Kali@0786";
+	const email = process.env.ADMIN_EMAIL;
+	const password = process.env.ADMIN_PASSWORD;
+	if (!email || !password) {
+		console.error("❌ ADMIN_EMAIL and ADMIN_PASSWORD environment variables are required");
+		process.exit(1);
+	}
 	const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || "12");
 
 	console.log(`Updating admin ${email} with password from .env...`);

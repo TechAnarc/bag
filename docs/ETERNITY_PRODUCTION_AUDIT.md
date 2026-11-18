@@ -30,17 +30,17 @@ Bombay Bag House (Triveni) is an enterprise luxury commerce platform:
 | `JWT_REFRESH_SECRET` | Render (Backend) | **REQUIRED** | **STRICT SECRET** | Key for signing user refresh JWTs | `random_secret_string_32_chars_min` |
 | `ADMIN_JWT_SECRET` | Render (Backend) | **REQUIRED** | **STRICT SECRET** | Key for signing admin session JWTs | `random_admin_secret_string_32_chars` |
 | `ADMIN_EMAIL` | Render (Backend) | **REQUIRED** | **STRICT SECRET** | Initial super admin email for seeding | `admin@trivenibombaybaghouse.com` |
-| `ADMIN_PASSWORD` | Render (Backend) | **REQUIRED** | **STRICT SECRET** | Initial super admin password (min 8 chars) | `Mahakal@Mahakali` |
+| `ADMIN_PASSWORD` | Render (Backend) | **REQUIRED** | **STRICT SECRET** | Initial super admin password (min 8 chars) | `<YOUR_SECURE_ADMIN_PASSWORD>` |
 | `CORS_ORIGIN` | Render (Backend) | OPTIONAL | PUBLIC/INTERNAL | Allowed frontend origin URL | `https://bombaybaghouse.vercel.app` |
 | `CORS_ALLOWED_ORIGINS` | Render (Backend) | OPTIONAL | PUBLIC/INTERNAL | Comma-separated allowed origins | `https://bombaybaghouse.vercel.app,https://trivenibombaybaghouse.vercel.app` |
 | `FRONTEND_URL` | Render (Backend) | OPTIONAL | PUBLIC/INTERNAL | Frontend base URL for email links | `https://bombaybaghouse.vercel.app` |
-| `BACKEND_URL` | Render (Backend) | OPTIONAL | PUBLIC/INTERNAL | Render backend base URL | `https://bombaybaghouse.onrender.com` |
+| `BACKEND_URL` | Render (Backend) | OPTIONAL | PUBLIC/INTERNAL | Render backend base URL | `https://bag-azlo.onrender.com` |
 | `RAZORPAY_KEY_ID` | Render (Backend) | OPTIONAL (Payments) | PUBLIC | Razorpay API Key ID | `rzp_live_xxxxxxxxxxxxxx` |
 | `RAZORPAY_KEY_SECRET` | Render (Backend) | OPTIONAL (Payments) | **STRICT SECRET** | Razorpay API Key Secret | `xxxxxxxxxxxxxxxxxxxxxxxx` |
 | `RAZORPAY_WEBHOOK_SECRET` | Render (Backend) | OPTIONAL (Webhooks) | **STRICT SECRET** | Webhook HMAC verification secret | `whsec_xxxxxxxxxxxxxxxxxx` |
 | `SUPABASE_URL` | Render & Vercel | OPTIONAL | PUBLIC | Supabase project URL | `https://xyz.supabase.co` |
 | `SUPABASE_SERVICE_ROLE_KEY` | Render (Backend) | OPTIONAL | **STRICT SECRET** | Supabase Service Role Key (Backend only!) | `eyJhbGciOi...` |
-| `VITE_API_URL` | Vercel (Frontend) | **REQUIRED** | **PUBLIC SAFE** | Render API URL (MUST point to Render) | `https://bombaybaghouse.onrender.com/api/v1` |
+| `VITE_API_URL` | Vercel (Frontend) | **REQUIRED** | **PUBLIC SAFE** | Render API URL (MUST point to Render) | `https://bag-azlo.onrender.com/api/v1` |
 | `VITE_SUPABASE_URL` | Vercel (Frontend) | OPTIONAL | **PUBLIC SAFE** | Supabase project URL | `https://xyz.supabase.co` |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | Vercel (Frontend) | OPTIONAL | **PUBLIC SAFE** | Supabase publishable / anon key | `sb_publishable_...` |
 

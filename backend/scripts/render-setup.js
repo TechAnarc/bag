@@ -49,8 +49,13 @@ async function setupRenderDatabase() {
 		console.log("✅ [RENDER-SETUP] Admin table exists");
 
 		// Check if super admin exists
-		const adminEmail =
-			process.env.ADMIN_EMAIL || "mahakal.mahakali014@gmail.com";
+		const adminEmail = process.env.ADMIN_EMAIL;
+		const password = process.env.ADMIN_PASSWORD;
+		if (!adminEmail || !password) {
+			console.error("❌ [RENDER-SETUP] ADMIN_EMAIL and ADMIN_PASSWORD must be configured");
+			await client.end();
+			process.exit(1);
+		}
 		const adminCheck = await client.query(
 			'SELECT * FROM "Admin" WHERE email = $1',
 			[adminEmail],
@@ -62,7 +67,6 @@ async function setupRenderDatabase() {
 			);
 
 			// Always update password hash to match current env var
-			const password = process.env.ADMIN_PASSWORD || "Kali@0786";
 			const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || "12");
 			const passwordHash = await bcrypt.hash(password, saltRounds);
 
@@ -82,7 +86,6 @@ async function setupRenderDatabase() {
 		console.log("📝 [RENDER-SETUP] Creating super admin...");
 
 		// Hash password
-		const password = process.env.ADMIN_PASSWORD || "Kali@0786";
 		const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || "12");
 		const passwordHash = await bcrypt.hash(password, saltRounds);
 
@@ -107,7 +110,6 @@ async function setupRenderDatabase() {
 
 		console.log("✅ [RENDER-SETUP] Super admin created successfully");
 		console.log(`   Email: ${adminEmail}`);
-		console.log(`   Password: ${password}`);
 
 		await client.end();
 		console.log("🎉 [RENDER-SETUP] Setup completed successfully!");

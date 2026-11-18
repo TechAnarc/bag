@@ -81,8 +81,8 @@ async function run() {
 
   // ── AUTHENTICATION: CORRECT CREDENTIALS ───────────────────────────
   const goodLogin = await req("POST", "/admin/auth/login", {
-    email: "admin@trivenibombaybaghouse.com",
-    password: "Mahakali1432"
+    email: process.env.ADMIN_EMAIL || "admin@trivenibombaybaghouse.com",
+    password: process.env.ADMIN_PASSWORD || ""
   });
   test("Login with correct credentials returns 200", goodLogin.status === 200, `status=${goodLogin.status}`);
   token = goodLogin.body?.data?.token || goodLogin.body?.token;

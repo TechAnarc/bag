@@ -45,8 +45,8 @@ async function runMigrations() {
 		if (migrationUrl.includes("pooler.supabase.com:6543")) {
 			// Change port from 6543 (transaction) to 5432 (session)
 			// Keep the pooler hostname (it's accessible from Render)
-			migrationUrl = migrationUrl.replace(":6543", ":6432");
-			console.log("✅ [MIGRATE] Switched to Session mode pooler (port 6432)");
+			migrationUrl = migrationUrl.replace(":6543", ":5432");
+			console.log("✅ [MIGRATE] Switched to Session mode pooler (port 5432)");
 		}
 
 		// Remove pgbouncer=true parameter and add pgbouncer=false for session mode

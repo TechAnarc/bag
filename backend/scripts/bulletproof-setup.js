@@ -84,10 +84,10 @@ async function bulletproofSetup() {
 	log("🚀 Starting BULLETPROOF database setup...");
 	log(`📋 Environment: NODE_ENV=${process.env.NODE_ENV}`);
 	log(
-		`📋 ADMIN_EMAIL configured: ${process.env.ADMIN_EMAIL ? "YES" : "NO (using fallback)"}`,
+		`📋 ADMIN_EMAIL configured: ${process.env.ADMIN_EMAIL ? "YES" : "NO"}`,
 	);
 	log(
-		`📋 ADMIN_PASSWORD configured: ${process.env.ADMIN_PASSWORD ? "YES (" + process.env.ADMIN_PASSWORD.length + " chars)" : "NO (using fallback)"}`,
+		`📋 ADMIN_PASSWORD configured: ${process.env.ADMIN_PASSWORD ? "YES" : "NO"}`,
 	);
 	log(
 		`📋 BCRYPT_SALT_ROUNDS: ${process.env.BCRYPT_SALT_ROUNDS || "12 (default)"}`,
@@ -344,20 +344,22 @@ async function bulletproofSetup() {
 		// ============================================
 		log("👤 Setting up Super Admin...");
 
-		const adminEmail =
-			process.env.ADMIN_EMAIL || "mahakal.mahakali014@gmail.com";
-		const adminPassword = process.env.ADMIN_PASSWORD || "Mahakal@Mahakali";
+		const adminEmail = process.env.ADMIN_EMAIL;
+		const adminPassword = process.env.ADMIN_PASSWORD;
+		if (!adminEmail || !adminPassword) {
+			logError("ADMIN_EMAIL and ADMIN_PASSWORD must be configured in environment variables!");
+			await client.end();
+			process.exit(1);
+		}
 		const adminName = process.env.ADMIN_NAME || "Super Admin";
 		const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || "12");
 
 		log(`  📧 Admin Email: ${adminEmail}`);
-		log(`  🔐 Password length: ${adminPassword.length} chars`);
 		log(`  🧂 Salt rounds: ${saltRounds}`);
 
 		// Hash password
 		log("  🔒 Hashing password...");
 		const passwordHash = await bcrypt.hash(adminPassword, saltRounds);
-		log(`  🔒 Hash generated: ${passwordHash.substring(0, 20)}...`);
 
 		// Check if admin exists
 		const existingAdmin = await client.query(

@@ -41,11 +41,35 @@ export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
       const url = new URL(request.url);
+      if (url.pathname === "/favicon.ico") {
+        return new Response(null, { status: 204 });
+      }
       if (url.pathname === "/health" || url.pathname === "/api/v1/health") {
         return new Response(
           JSON.stringify({ status: "healthy", service: "frontend-ssr", timestamp: new Date().toISOString() }),
           { status: 200, headers: { "content-type": "application/json" } }
         );
+      }
+
+      if (url.pathname.startsWith("/api/v1/")) {
+        const backendOrigin = (process.env.BACKEND_API_ORIGIN || "https://bag-azlo.onrender.com").replace(/\/+$/, "");
+        const targetUrl = `${backendOrigin}${url.pathname}${url.search}`;
+        const fwdHeaders = new Headers();
+        for (const key of ["accept", "authorization", "content-type", "cookie", "x-visitor-id"]) {
+          const val = request.headers.get(key);
+          if (val) fwdHeaders.set(key, val);
+        }
+        const upstream = await fetch(targetUrl, {
+          method: request.method,
+          headers: fwdHeaders,
+          body: request.method === "GET" || request.method === "HEAD" ? undefined : await request.arrayBuffer(),
+        });
+        const respHeaders = new Headers();
+        const ct = upstream.headers.get("content-type");
+        if (ct) respHeaders.set("content-type", ct);
+        const sc = upstream.headers.get("set-cookie");
+        if (sc) respHeaders.set("set-cookie", sc);
+        return new Response(upstream.body, { status: upstream.status, headers: respHeaders });
       }
 
       const handler = await getServerEntry();

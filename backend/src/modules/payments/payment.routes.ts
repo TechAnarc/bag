@@ -2,8 +2,7 @@ import { Router, Request, Response, NextFunction } from "express";
 import express from "express";
 import rateLimit from "express-rate-limit";
 import { PaymentController } from "./payment.controller";
-import { authenticate, authorize } from "../../middleware/auth.middleware";
-import { Role } from "@prisma/client";
+import { authenticateAdmin } from "../../middleware/adminAuth.middleware";
 
 const router = Router();
 const paymentController = new PaymentController();
@@ -55,8 +54,7 @@ router.get("/webhook/health", (req, res) =>
  */
 router.get(
 	"/webhook/registry",
-	authenticate,
-	authorize(Role.ADMIN),
+	authenticateAdmin,
 	(req, res) => paymentController.getRegisteredEvents(req as any, res),
 );
 
@@ -64,7 +62,7 @@ router.get(
  * GET /api/v1/payments/:paymentId
  * Admin only — fetch live payment details from Razorpay.
  */
-router.get("/:paymentId", authenticate, authorize(Role.ADMIN), (req, res) =>
+router.get("/:paymentId", authenticateAdmin, (req, res) =>
 	paymentController.getPaymentDetails(req as any, res),
 );
 
@@ -74,8 +72,7 @@ router.get("/:paymentId", authenticate, authorize(Role.ADMIN), (req, res) =>
  */
 router.post(
 	"/:paymentId/refund",
-	authenticate,
-	authorize(Role.ADMIN),
+	authenticateAdmin,
 	(req, res) => paymentController.refundPayment(req as any, res),
 );
 

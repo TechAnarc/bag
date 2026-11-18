@@ -15,6 +15,7 @@ import sTravel from "@/assets/showcase-travel.jpg";
 export type Product = {
   id: string;
   slug: string;
+  sku?: string;
   name: string;
   category: string;
   gender: "women" | "men" | "unisex" | "kids";
@@ -25,6 +26,16 @@ export type Product = {
   color: string;
   material: string;
   size: string;
+  capacity?: string;
+  dimensions?: string;
+  weight?: string;
+  compartments?: number | string;
+  closureType?: string;
+  strapType?: string;
+  laptopCompatible?: boolean;
+  waterResistant?: boolean;
+  careInstructions?: string;
+  status?: string;
   rating: number;
   reviewCount: number;
   stock: number;
@@ -121,8 +132,9 @@ export const inr = (n: number) =>
 export const adaptBackendProduct = (p: any): Product => {
   const specs = p.specifications || {};
   const inv = p.inventory || {};
-  const sellingPrice = p.sellingPrice || p.price || 0;
-  const basePrice = p.basePrice || p.price * 1.3;
+  const sellingPrice = Number(p.sellingPrice ?? p.discountPrice ?? p.price ?? 0);
+  const rawBasePrice = p.basePrice ?? (p.discountPrice && p.price > p.discountPrice ? p.price : undefined);
+  const basePrice = rawBasePrice ? Number(rawBasePrice) : 0;
   const wasPrice = basePrice > sellingPrice ? basePrice : undefined;
 
   // Derive category slug cleanly
@@ -141,25 +153,43 @@ export const adaptBackendProduct = (p: any): Product => {
     ? p.images 
     : [p.thumbnail || "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=800&q=80"];
 
+  const resolvedStock =
+    typeof p.stock === "number"
+      ? p.stock
+      : typeof inv.quantity === "number"
+        ? inv.quantity
+        : 0;
+
   return {
     id: p.id,
     slug: p.slug || p.id,
+    sku: p.sku || p.id,
     name: p.name,
     category: categorySlug,
     gender: (p.gender?.toLowerCase() as any) || "unisex",
     ageGroup: (specs.ageGroup?.toLowerCase() as any) || "adult",
     price: sellingPrice,
     was: wasPrice,
-    brand: specs.brand || "Bombay Bag House",
+    brand: p.brand || specs.brand || "Bombay Bag House",
     color: specs.color || "Classic",
     material: specs.material || "Premium Leather",
     size: specs.dimensions || specs.capacity || "Standard",
+    capacity: specs.capacity || undefined,
+    dimensions: specs.dimensions || undefined,
+    weight: specs.weight || undefined,
+    compartments: specs.compartments ?? undefined,
+    closureType: specs.closureType || undefined,
+    strapType: specs.strapType || undefined,
+    laptopCompatible: typeof specs.laptopCompatible === "boolean" ? specs.laptopCompatible : undefined,
+    waterResistant: typeof specs.waterResistant === "boolean" ? specs.waterResistant : undefined,
+    careInstructions: p.careInstructions || specs.careInstructions || undefined,
+    status: p.status || (p.isActive === false ? "INACTIVE" : "ACTIVE"),
     rating: typeof p.rating === "number" ? p.rating : 4.8,
-    reviewCount: Array.isArray(p.reviews) ? p.reviews.length : (p.reviewCount || 42),
-    stock: typeof inv.quantity === "number" ? inv.quantity : 25,
+    reviewCount: Array.isArray(p.reviews) ? p.reviews.length : (p.reviewCount ?? 0),
+    stock: resolvedStock,
     isNew: p.isTrending || p.isFeatured,
     isBestseller: p.isFeatured,
-    badge: p.shortTagline ? undefined : "Handcrafted",
+    badge: p.badge || (p.isFeatured ? "Bestseller" : p.isTrending ? "Trending" : undefined),
     description: p.description || "Crafted with precision for everyday luxury and enduring elegance.",
     images: images.length >= 2 ? images : [...images, images[0]],
   };
